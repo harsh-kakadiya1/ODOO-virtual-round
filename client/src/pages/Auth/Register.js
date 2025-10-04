@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import PasswordStrengthIndicator from '../../components/UI/PasswordStrengthIndicator';
@@ -32,16 +33,7 @@ const Register = () => {
   const { register, loading, error } = useAuth();
   const navigate = useNavigate();
 
-  const countries = [
-    { code: 'US', name: 'United States', currency: 'USD' },
-    { code: 'GB', name: 'United Kingdom', currency: 'GBP' },
-    { code: 'CA', name: 'Canada', currency: 'CAD' },
-    { code: 'AU', name: 'Australia', currency: 'AUD' },
-    { code: 'IN', name: 'India', currency: 'INR' },
-    { code: 'DE', name: 'Germany', currency: 'EUR' },
-    { code: 'FR', name: 'France', currency: 'EUR' },
-    { code: 'JP', name: 'Japan', currency: 'JPY' }
-  ];
+  const { countries, setCurrency, loadingCountries } = useCurrency();
 
   // Debounced company name check
   const checkCompanyName = useCallback(async (companyName) => {
@@ -99,11 +91,13 @@ const Register = () => {
     if (name === 'country') {
       const countryData = countries.find(c => c.code === value);
       if (countryData) {
+        const newCurrency = countryData.currency || 'USD';
         setFormData(prev => ({
           ...prev,
           [name]: value,
-          currency: countryData.currency
+          currency: newCurrency
         }));
+        setCurrency(newCurrency);
       }
     }
   };

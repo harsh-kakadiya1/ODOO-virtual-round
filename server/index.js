@@ -26,6 +26,7 @@ app.use('/api/companies', require('./routes/companies'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/approvals', require('./routes/approvals'));
 app.use('/api/ocr', require('./routes/ocr'));
+app.use('/api/currency', require('./routes/currency'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

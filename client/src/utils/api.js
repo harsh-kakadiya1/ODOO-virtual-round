@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { convertAmount, fetchRates } from '../services/currencyService';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -125,6 +126,20 @@ export const formatCurrency = (amount, currency = 'USD') => {
     style: 'currency',
     currency: currency,
   }).format(amount);
+};
+
+// Convert amount from baseCurrency to targetCurrency and format
+export const convertAndFormat = async (amount, baseCurrency = 'USD', targetCurrency = 'USD') => {
+  if (!amount) return formatCurrency(0, targetCurrency);
+  if (baseCurrency === targetCurrency) return formatCurrency(amount, targetCurrency);
+  try {
+    const converted = await convertAmount(amount, baseCurrency, targetCurrency);
+    return formatCurrency(converted, targetCurrency);
+  } catch (e) {
+    // fallback to formatting original amount
+    console.error('convertAndFormat error', e);
+    return formatCurrency(amount, targetCurrency);
+  }
 };
 
 export const formatDate = (date) => {
