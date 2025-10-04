@@ -179,12 +179,15 @@ router.put('/:id', [
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (email) user.email = email;
-    if (role) user.role = role;
-    if (manager !== undefined) user.manager = manager;
+    if (req.body.password) user.password = req.body.password; // Will be hashed by pre-save hook
+    if (role) {
+      user.role = role;
+      user.isManagerApprover = role === 'manager' || role === 'admin';
+    }
+    if (manager !== undefined) user.manager = manager || null;
     if (department !== undefined) user.department = department;
     if (employeeId !== undefined) user.employeeId = employeeId;
     if (phone !== undefined) user.phone = phone;
-    if (isManagerApprover !== undefined) user.isManagerApprover = isManagerApprover;
 
     await user.save();
 

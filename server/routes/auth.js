@@ -66,13 +66,15 @@ router.post('/register', [
       });
     }
 
-    // Create company
+    // Create company with currency based on country
     const company = new Company({
       name: companyName.trim(),
       country,
       currency: currency.toUpperCase(),
       settings: {
-        expenseCategories: ['Travel', 'Meals', 'Office Supplies', 'Transportation', 'Accommodation', 'Other']
+        expenseCategories: ['Travel', 'Meals', 'Office Supplies', 'Transportation', 'Accommodation', 'Other'],
+        autoApproveLimit: 0,
+        requireReceipts: true
       }
     });
     await company.save();
