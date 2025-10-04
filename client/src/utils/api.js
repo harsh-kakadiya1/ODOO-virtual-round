@@ -1,0 +1,126 @@
+import axios from 'axios';
+
+// Create axios instance with base configuration
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || '/api',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// API endpoints
+export const authAPI = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  register: (userData) => api.post('/auth/register', userData),
+  getCurrentUser: () => api.get('/auth/me'),
+  refreshToken: () => api.post('/auth/refresh'),
+};
+
+export const usersAPI = {
+  getUsers: (params) => api.get('/users', { params }),
+  getUser: (id) => api.get(`/users/${id}`),
+  createUser: (userData) => api.post('/users', userData),
+  updateUser: (id, userData) => api.put(`/users/${id}`, userData),
+  deleteUser: (id) => api.delete(`/users/${id}`),
+};
+
+export const companiesAPI = {
+  getCompany: () => api.get('/companies'),
+  updateCompany: (companyData) => api.put('/companies', companyData),
+  updateSettings: (settings) => api.put('/companies/settings', settings),
+};
+
+export const expensesAPI = {
+  getExpenses: (params) => api.get('/expenses', { params }),
+  getExpense: (id) => api.get(`/expenses/${id}`),
+  createExpense: (expenseData) => api.post('/expenses', expenseData),
+  updateExpense: (id, expenseData) => api.put(`/expenses/${id}`, expenseData),
+  deleteExpense: (id) => api.delete(`/expenses/${id}`),
+};
+
+export const approvalsAPI = {
+  getPendingApprovals: (params) => api.get('/approvals/pending', { params }),
+  approveExpense: (expenseId, data) => api.post(`/approvals/${expenseId}/approve`, data),
+  rejectExpense: (expenseId, data) => api.post(`/approvals/${expenseId}/reject`, data),
+  getApprovalRules: () => api.get('/approvals/rules'),
+  createApprovalRule: (ruleData) => api.post('/approvals/rules', ruleData),
+  updateApprovalRule: (id, ruleData) => api.put(`/approvals/rules/${id}`, ruleData),
+  deleteApprovalRule: (id) => api.delete(`/approvals/rules/${id}`),
+};
+
+// Utility functions
+export const handleApiError = (error) => {
+  const message = error.response?.data?.message || 'An error occurred';
+  const status = error.response?.status;
+  
+  if (status === 400) {
+    return `Bad Request: ${message}`;
+  } else if (status === 401) {
+    return 'Unauthorized: Please log in again';
+  } else if (status === 403) {
+    return 'Forbidden: You do not have permission to perform this action';
+  } else if (status === 404) {
+    return 'Not Found: The requested resource was not found';
+  } else if (status === 422) {
+    return `Validation Error: ${message}`;
+  } else if (status >= 500) {
+    return 'Server Error: Please try again later';
+  }
+  
+  return message;
+};
+
+export const formatCurrency = (amount, currency = 'USD') => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
+  }).format(amount);
+};
+
+export const formatDate = (date) => {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(date));
+};
+
+export const formatDateTime = (date) => {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
+};
+
+export default api;
