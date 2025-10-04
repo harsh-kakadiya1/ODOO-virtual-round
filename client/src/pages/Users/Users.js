@@ -265,7 +265,7 @@ const Users = () => {
                         {user.department ? (
                           <div className="flex items-center text-sm text-gray-900">
                             <Building className="h-4 w-4 mr-1 text-gray-400" />
-                            {user.department}
+                            {user.department.name}
                           </div>
                         ) : (
                           <span className="text-sm text-gray-400">-</span>

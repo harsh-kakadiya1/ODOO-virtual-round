@@ -3,8 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
-import { Building2, Save, Users, Settings, DollarSign } from 'lucide-react';
-import { companiesAPI, handleApiError } from '../../utils/api';
+import { Building2, Save, Users, Settings, DollarSign, Plus, Trash2, Edit, X } from 'lucide-react';
+import { companiesAPI, departmentsAPI, handleApiError } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const Company = () => {
@@ -12,6 +12,10 @@ const Company = () => {
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [showAddDepartment, setShowAddDepartment] = useState(false);
+  const [editingDepartment, setEditingDepartment] = useState(null);
+  const [newDepartment, setNewDepartment] = useState({ name: '', description: '' });
   
   // Check if user is admin
   const isAdmin = user?.role === 'admin';
@@ -54,6 +58,7 @@ const Company = () => {
 
   useEffect(() => {
     fetchCompanyData();
+    fetchDepartments();
   }, []);
 
   const fetchCompanyData = async () => {
@@ -153,6 +158,75 @@ const Company = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await departmentsAPI.getDepartments();
+      setDepartments(response.data);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  const handleAddDepartment = async (e) => {
+    e.preventDefault();
+    if (!newDepartment.name.trim()) {
+      toast.error('Department name is required');
+      return;
+    }
+
+    try {
+      await departmentsAPI.createDepartment(newDepartment);
+      toast.success('Department added successfully!');
+      setNewDepartment({ name: '', description: '' });
+      setShowAddDepartment(false);
+      fetchDepartments();
+    } catch (error) {
+      toast.error(handleApiError(error));
+    }
+  };
+
+  const handleEditDepartment = async (e) => {
+    e.preventDefault();
+    if (!editingDepartment.name.trim()) {
+      toast.error('Department name is required');
+      return;
+    }
+
+    try {
+      await departmentsAPI.updateDepartment(editingDepartment._id, {
+        name: editingDepartment.name,
+        description: editingDepartment.description
+      });
+      toast.success('Department updated successfully!');
+      setEditingDepartment(null);
+      fetchDepartments();
+    } catch (error) {
+      toast.error(handleApiError(error));
+    }
+  };
+
+  const handleDeleteDepartment = async (departmentId, departmentName) => {
+    if (!window.confirm(`Are you sure you want to delete the "${departmentName}" department? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await departmentsAPI.deleteDepartment(departmentId);
+      toast.success('Department deleted successfully!');
+      fetchDepartments();
+    } catch (error) {
+      toast.error(handleApiError(error));
+    }
+  };
+
+  const startEditDepartment = (department) => {
+    setEditingDepartment({ ...department });
+  };
+
+  const cancelEditDepartment = () => {
+    setEditingDepartment(null);
   };
 
   if (loading) {
@@ -411,6 +485,144 @@ const Company = () => {
                   </Button>
                 )}
               </form>
+            </CardContent>
+          </Card>
+
+          {/* Department Management Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Building2 className="h-5 w-5 mr-2" />
+                  Departments
+                </div>
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddDepartment(true)}
+                    className="flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Department
+                  </Button>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {departments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No departments found</p>
+                  {isAdmin && (
+                    <p className="text-sm mt-2">Click "Add Department" to create your first department</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {departments.map((department) => (
+                    <div key={department._id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                      {editingDepartment?._id === department._id ? (
+                        <form onSubmit={handleEditDepartment} className="flex-1 flex items-center space-x-3">
+                          <Input
+                            value={editingDepartment.name}
+                            onChange={(e) => setEditingDepartment(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Department name"
+                            className="flex-1"
+                            required
+                          />
+                          <Input
+                            value={editingDepartment.description}
+                            onChange={(e) => setEditingDepartment(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Description (optional)"
+                            className="flex-1"
+                          />
+                          <Button type="submit" size="sm" className="bg-green-600 hover:bg-green-700">
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={cancelEditDepartment}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </form>
+                      ) : (
+                        <>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">{department.name}</h4>
+                            {department.description && (
+                              <p className="text-sm text-gray-500 mt-1">{department.description}</p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                              {department.employeeCount || 0} employee(s)
+                            </p>
+                          </div>
+                          {isAdmin && (
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startEditDepartment(department)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteDepartment(department._id, department.name)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add Department Form */}
+              {showAddDepartment && isAdmin && (
+                <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <h4 className="font-medium text-gray-900 mb-3">Add New Department</h4>
+                  <form onSubmit={handleAddDepartment} className="space-y-3">
+                    <Input
+                      value={newDepartment.name}
+                      onChange={(e) => setNewDepartment(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Department name"
+                      required
+                    />
+                    <Input
+                      value={newDepartment.description}
+                      onChange={(e) => setNewDepartment(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Description (optional)"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <Button type="submit" size="sm" className="bg-green-600 hover:bg-green-700">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Department
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowAddDepartment(false);
+                          setNewDepartment({ name: '', description: '' });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

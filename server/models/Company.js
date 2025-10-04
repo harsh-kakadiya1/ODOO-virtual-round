@@ -61,6 +61,10 @@ const companySchema = new mongoose.Schema({
       ref: 'ApprovalRule'
     }
   },
+  departments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Department'
+  }],
   isActive: {
     type: Boolean,
     default: true

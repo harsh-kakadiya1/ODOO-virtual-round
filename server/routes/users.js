@@ -15,6 +15,7 @@ router.get('/', auth, authorize('admin', 'manager'), async (req, res) => {
       isActive: true 
     })
     .populate('manager', 'firstName lastName email')
+    .populate('department', 'name description')
     .select('-password')
     .sort({ createdAt: -1 });
 
@@ -35,6 +36,7 @@ router.get('/:id', auth, async (req, res) => {
       company: req.user.company
     })
     .populate('manager', 'firstName lastName email')
+    .populate('department', 'name description')
     .select('-password');
 
     if (!user) {

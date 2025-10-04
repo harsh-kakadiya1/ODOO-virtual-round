@@ -5,7 +5,7 @@ import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import { UserPlus, Save, ArrowLeft } from 'lucide-react';
-import { usersAPI, handleApiError } from '../../utils/api';
+import { usersAPI, departmentsAPI, handleApiError } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const UserForm = () => {
@@ -15,6 +15,7 @@ const UserForm = () => {
 
   const [loading, setLoading] = useState(false);
   const [managers, setManagers] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -30,6 +31,7 @@ const UserForm = () => {
 
   useEffect(() => {
     fetchManagers();
+    fetchDepartments();
     if (isEditing) {
       fetchUser();
     }
@@ -48,6 +50,16 @@ const UserForm = () => {
     }
   };
 
+  const fetchDepartments = async () => {
+    try {
+      const response = await departmentsAPI.getDepartments();
+      setDepartments(response.data);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      toast.error(handleApiError(error));
+    }
+  };
+
   const fetchUser = async () => {
     try {
       setLoading(true);
@@ -60,7 +72,7 @@ const UserForm = () => {
         password: '', // Never pre-fill password
         role: user.role || 'employee',
         manager: user.manager?._id || '',
-        department: user.department || '',
+        department: user.department?._id || '',
         employeeId: user.employeeId || '',
         phone: user.phone || ''
       });
@@ -285,12 +297,22 @@ const UserForm = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Input
-                  label="Department"
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Department
+                </label>
+                <select
                   name="department"
                   value={formData.department}
                   onChange={handleInputChange}
-                />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Select a department</option>
+                  {departments.map((dept) => (
+                    <option key={dept._id} value={dept._id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <Input

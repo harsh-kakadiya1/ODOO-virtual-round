@@ -182,4 +182,15 @@ export const dashboardAPI = {
     api.get('/dashboard/expense-trends', { params: { period, groupBy } })
 };
 
+export const departmentsAPI = {
+  getDepartments: (includeInactive = false) => 
+    api.get('/departments', { params: { includeInactive } }),
+  getDepartment: (id) => api.get(`/departments/${id}`),
+  createDepartment: (data) => api.post('/departments', data),
+  updateDepartment: (id, data) => api.put(`/departments/${id}`, data),
+  deleteDepartment: (id) => api.delete(`/departments/${id}`),
+  bulkCreateDepartments: (departments) => api.post('/departments/bulk-create', { departments }),
+  getDepartmentStats: () => api.get('/departments/stats')
+};
+
 export default api;

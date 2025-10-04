@@ -91,6 +91,14 @@ router.post('/register', [
     });
     await user.save();
 
+    // Create default departments for the company
+    const Department = require('../models/Department');
+    const defaultDepartments = await Department.createDefaultDepartments(company._id, user._id);
+    
+    // Update company with department references
+    company.departments = defaultDepartments.map(dept => dept._id);
+    await company.save();
+
     const token = generateToken(user._id);
 
     res.status(201).json({

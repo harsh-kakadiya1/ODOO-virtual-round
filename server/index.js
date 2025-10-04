@@ -42,6 +42,7 @@ app.use('/api/ocr', require('./routes/ocr'));
 app.use('/api/currency', require('./routes/currency'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/departments', require('./routes/departments'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
