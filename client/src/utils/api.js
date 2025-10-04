@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { convertAmount, fetchRates } from '../services/currencyService';
+import { convertAmount } from '../services/currencyService';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -44,6 +44,8 @@ export const authAPI = {
   getCurrentUser: () => api.get('/auth/me'),
   refreshToken: () => api.post('/auth/refresh'),
   changePassword: (passwordData) => api.put('/auth/change-password', passwordData),
+  forgotPassword: (emailData) => api.post('/auth/forgot-password', emailData),
+  resetPassword: (resetData) => api.post('/auth/reset-password', resetData),
 };
 
 export const usersAPI = {

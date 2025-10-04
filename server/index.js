@@ -61,6 +61,10 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/expense_m
 .then(() => console.log('MongoDB connected successfully'))
 .catch(err => console.error('MongoDB connection error:', err));
 
+// Initialize email service
+const emailService = require('./utils/emailService');
+emailService.testConnection();
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

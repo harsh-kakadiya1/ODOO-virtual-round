@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Ca
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import { UserPlus, Save, ArrowLeft } from 'lucide-react';
+import { UserPlus, Save, ArrowLeft, Mail } from 'lucide-react';
 import { usersAPI, departmentsAPI, handleApiError } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -114,11 +114,9 @@ const UserForm = () => {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
     }
-    if (!isEditing && !formData.password) {
-      newErrors.password = 'Password is required';
-    }
-    if (!isEditing && formData.password && formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    // Password validation only for editing existing users (and only if they provide a password)
+    if (isEditing && formData.password && formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
     }
 
     setErrors(newErrors);
@@ -136,8 +134,11 @@ const UserForm = () => {
       setLoading(true);
       
       const submitData = { ...formData };
-      // Don't send empty password on edit
-      if (isEditing && !submitData.password) {
+      // For new users, don't send password (it will be auto-generated)
+      // For editing, only send password if it's provided
+      if (!isEditing) {
+        delete submitData.password;
+      } else if (isEditing && !submitData.password) {
         delete submitData.password;
       }
 
@@ -146,7 +147,7 @@ const UserForm = () => {
         toast.success('User updated successfully');
       } else {
         await usersAPI.createUser(submitData);
-        toast.success('User created successfully');
+        toast.success('User created successfully! Welcome email with login credentials has been sent.');
       }
 
       navigate('/users');
@@ -245,17 +246,38 @@ const UserForm = () => {
               />
             </div>
 
-            <div>
-              <Input
-                label={isEditing ? "New Password (leave blank to keep current)" : "Password"}
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                error={errors.password}
-                required={!isEditing}
-              />
-            </div>
+            {isEditing && (
+              <div>
+                <Input
+                  label="New Password (leave blank to keep current)"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  error={errors.password}
+                />
+              </div>
+            )}
+
+            {!isEditing && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <Mail className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Login Credentials Will Be Sent via Email
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>
+                        A secure temporary password will be automatically generated and sent to the user's email address along with their login credentials and welcome instructions.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

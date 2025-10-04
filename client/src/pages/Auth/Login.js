@@ -168,13 +168,12 @@ const Login = () => {
             </div>
 
             <div className="text-sm">
-              <button 
-                type="button"
+              <Link
+                to="/forgot-password"
                 className="font-medium text-primary-600 hover:text-primary-500"
-                onClick={() => alert('Password reset functionality will be implemented soon')}
               >
                 Forgot your password?
-              </button>
+              </Link>
             </div>
           </div>
 

@@ -2,8 +2,29 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { auth, authorize } = require('../middleware/auth');
+const emailService = require('../utils/emailService');
 
 const router = express.Router();
+
+// Utility function to generate temporary password
+const generateTempPassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+  let password = '';
+  
+  // Ensure at least one of each character type
+  password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]; // uppercase
+  password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]; // lowercase
+  password += '0123456789'[Math.floor(Math.random() * 10)]; // number
+  password += '!@#$%'[Math.floor(Math.random() * 5)]; // special char
+  
+  // Fill remaining characters
+  for (let i = 4; i < 12; i++) {
+    password += chars[Math.floor(Math.random() * chars.length)];
+  }
+  
+  // Shuffle the password
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+};
 
 // @route   GET /api/users
 // @desc    Get all users in company
@@ -64,7 +85,6 @@ router.post('/', [
   body('firstName').notEmpty().withMessage('First name is required'),
   body('lastName').notEmpty().withMessage('Last name is required'),
   body('email').isEmail().withMessage('Please enter a valid email'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('role').isIn(['employee', 'manager', 'admin']).withMessage('Invalid role')
 ], async (req, res) => {
   try {
@@ -73,7 +93,7 @@ router.post('/', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { firstName, lastName, email, password, role, manager, department, employeeId, phone } = req.body;
+    const { firstName, lastName, email, role, manager, department, employeeId, phone } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -93,15 +113,18 @@ router.post('/', [
       }
     }
 
+    // Generate temporary password
+    const tempPassword = generateTempPassword();
+
     const user = new User({
       firstName,
       lastName,
       email,
-      password,
+      password: tempPassword,
       role,
       company: req.user.company,
       manager: manager || null,
-      department,
+      department: department || null,
       employeeId,
       phone,
       isManagerApprover: role === 'manager' || role === 'admin'
@@ -114,7 +137,31 @@ router.post('/', [
       .populate('department', 'name description')
       .select('-password');
 
-    res.status(201).json(createdUser);
+    // Send welcome email with temporary password
+    try {
+      const emailResult = await emailService.sendWelcomeEmail(email, {
+        firstName,
+        lastName,
+        role,
+        employeeId
+      }, tempPassword);
+
+      if (emailResult.success) {
+        console.log(`Welcome email sent to ${email}`);
+      } else {
+        console.error(`Failed to send welcome email to ${email}:`, emailResult.error);
+        // Don't fail the user creation if email fails
+      }
+    } catch (emailError) {
+      console.error('Email service error:', emailError);
+      // Continue with user creation even if email fails
+    }
+
+    res.status(201).json({
+      ...createdUser.toObject(),
+      message: 'User created successfully. Welcome email sent to the user.',
+      emailSent: true
+    });
   } catch (error) {
     console.error('Create user error:', error);
     res.status(500).json({ message: 'Server error' });
