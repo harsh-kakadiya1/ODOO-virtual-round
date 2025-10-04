@@ -176,4 +176,10 @@ export const notificationsAPI = {
   deleteNotification: (id) => api.delete(`/notifications/${id}`)
 };
 
+export const dashboardAPI = {
+  getStats: (period = 'month') => api.get('/dashboard/stats', { params: { period } }),
+  getExpenseTrends: (period = 'month', groupBy = 'day') => 
+    api.get('/dashboard/expense-trends', { params: { period, groupBy } })
+};
+
 export default api;

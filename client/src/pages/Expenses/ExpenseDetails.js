@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Ca
 import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import { Receipt, ArrowLeft, Edit, Download, User, Calendar, DollarSign, Tag, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Receipt, ArrowLeft, Edit, Download, User, Calendar, DollarSign, Tag, FileText, CheckCircle, XCircle, Clock, Trash2 } from 'lucide-react';
 import { expensesAPI, formatDate, formatDateTime } from '../../utils/api';
 import Money from '../../components/UI/Money';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,6 +16,8 @@ const ExpenseDetails = () => {
   const [expense, setExpense] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     fetchExpenseDetails();
@@ -32,6 +34,35 @@ const ExpenseDetails = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteExpense = async () => {
+    if (!expense) return;
+
+    try {
+      setDeleteLoading(true);
+      await expensesAPI.deleteExpense(expense._id);
+      navigate('/expenses');
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      alert('Failed to delete expense. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+  };
+
+  const canDeleteExpense = (expense) => {
+    if (!expense || !user) return false;
+    const employeeId = expense.employee?._id || expense.employee;
+    return expense.status === 'pending' && employeeId === user._id;
   };
 
   const getStatusBadgeColor = (status) => {
@@ -114,14 +145,31 @@ const ExpenseDetails = () => {
             <p className="text-gray-600">View expense claim details</p>
           </div>
         </div>
-        {canEditExpense() && (
-          <Link to={`/expenses/${expense._id}/edit`}>
-            <Button className="flex items-center">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Expense
+        <div className="flex items-center space-x-3">
+          {canEditExpense() && (
+            <Link to={`/expenses/${expense._id}/edit`}>
+              <Button className="flex items-center">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Expense
+              </Button>
+            </Link>
+          )}
+          {canDeleteExpense(expense) && (
+            <Button
+              variant="outline"
+              onClick={handleDeleteClick}
+              disabled={deleteLoading}
+              className="flex items-center text-red-600 hover:text-red-700 hover:border-red-300"
+            >
+              {deleteLoading ? (
+                <LoadingSpinner className="h-4 w-4 mr-2" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Delete Expense
             </Button>
-          </Link>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Status Overview */}
@@ -341,6 +389,64 @@ const ExpenseDetails = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && expense && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900">Delete Expense</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-sm text-gray-700">
+                Are you sure you want to delete the expense <strong>"{expense.description}"</strong>?
+              </p>
+              <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <div className="text-sm text-gray-600">
+                  <div><strong>Amount:</strong> <Money amount={expense.amount} currency={expense.currency} /></div>
+                  <div><strong>Category:</strong> {expense.category}</div>
+                  <div><strong>Date:</strong> {formatDate(expense.expenseDate)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDeleteExpense}
+                disabled={deleteLoading}
+                className="bg-red-600 text-white hover:bg-red-700 border-red-600"
+              >
+                {deleteLoading ? (
+                  <>
+                    <LoadingSpinner className="h-4 w-4 mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Expense
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -110,6 +110,7 @@ router.post('/', [
       description,
       conditions,
       approvalSteps,
+      approvalLogic,
       priority,
       isActive
     } = req.body;
@@ -142,12 +143,71 @@ router.post('/', [
       }
     }
 
+    // Validate conditional rules if provided
+    if (approvalLogic?.conditionalRules?.length > 0) {
+      for (const rule of approvalLogic.conditionalRules) {
+        // Validate rule type
+        const validRuleTypes = ['percentage', 'specific_approver', 'amount_threshold', 'category', 'department'];
+        if (!validRuleTypes.includes(rule.ruleType)) {
+          return res.status(400).json({ 
+            message: `Invalid rule type: ${rule.ruleType}` 
+          });
+        }
+
+        // Validate action
+        const validActions = ['auto_approve', 'auto_reject', 'skip_step', 'require_additional'];
+        if (!validActions.includes(rule.action)) {
+          return res.status(400).json({ 
+            message: `Invalid action: ${rule.action}` 
+          });
+        }
+
+        // Validate specific approver rule
+        if (rule.ruleType === 'specific_approver' && rule.condition?.approverId) {
+          const approver = await User.findOne({
+            _id: rule.condition.approverId,
+            company: req.user.company,
+            role: { $in: ['manager', 'admin'] }
+          });
+          if (!approver) {
+            return res.status(400).json({ 
+              message: 'Specific approver must be a valid manager or admin from your company' 
+            });
+          }
+        }
+
+        // Validate additional approvers
+        if (rule.action === 'require_additional' && rule.additionalApprovers?.length > 0) {
+          const additionalApprovers = await User.find({
+            _id: { $in: rule.additionalApprovers },
+            company: req.user.company,
+            role: { $in: ['manager', 'admin'] }
+          });
+          if (additionalApprovers.length !== rule.additionalApprovers.length) {
+            return res.status(400).json({ 
+              message: 'All additional approvers must be valid managers or admins from your company' 
+            });
+          }
+        }
+
+        // Validate percentage rule
+        if (rule.ruleType === 'percentage' && rule.condition?.percentage) {
+          if (rule.condition.percentage < 0 || rule.condition.percentage > 100) {
+            return res.status(400).json({ 
+              message: 'Percentage must be between 0 and 100' 
+            });
+          }
+        }
+      }
+    }
+
     const rule = new ApprovalRule({
       company: req.user.company,
       name,
       description,
       conditions: conditions || {},
       approvalSteps,
+      approvalLogic: approvalLogic || { type: 'sequential' },
       priority: priority || 1,
       isActive: isActive !== false,
       createdBy: req.user._id

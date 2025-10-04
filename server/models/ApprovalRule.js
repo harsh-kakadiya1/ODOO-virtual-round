@@ -60,7 +60,7 @@ const approvalRuleSchema = new mongoose.Schema({
   approvalLogic: {
     type: {
       type: String,
-      enum: ['sequential', 'percentage', 'specific_approver', 'hybrid'],
+      enum: ['sequential', 'percentage', 'specific_approver', 'hybrid', 'conditional'],
       default: 'sequential'
     },
     percentageRequired: {
@@ -76,6 +76,57 @@ const approvalRuleSchema = new mongoose.Schema({
     autoApproveOnSpecific: {
       type: Boolean,
       default: false
+    },
+    // Conditional rules for hybrid approval
+    conditionalRules: [{
+      ruleType: {
+        type: String,
+        enum: ['percentage', 'specific_approver', 'amount_threshold', 'category', 'department'],
+        required: true
+      },
+      condition: {
+        // For percentage rule
+        percentage: {
+          type: Number,
+          min: 0,
+          max: 100
+        },
+        // For specific approver rule
+        approverId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        // For amount threshold rule
+        amountThreshold: {
+          type: Number,
+          min: 0
+        },
+        // For category rule
+        category: {
+          type: String,
+          trim: true
+        },
+        // For department rule
+        department: {
+          type: String,
+          trim: true
+        }
+      },
+      action: {
+        type: String,
+        enum: ['auto_approve', 'auto_reject', 'skip_step', 'require_additional'],
+        required: true
+      },
+      additionalApprovers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }]
+    }],
+    // Logic operator for combining multiple rules
+    ruleOperator: {
+      type: String,
+      enum: ['AND', 'OR'],
+      default: 'OR'
     }
   },
   escalation: {

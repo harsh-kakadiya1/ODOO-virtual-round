@@ -22,6 +22,8 @@ const notificationSchema = new mongoose.Schema({
       'expense_submitted',
       'expense_approved',
       'expense_rejected',
+      'expense_auto_approved',
+      'expense_deleted',
       'expense_requires_approval',
       'approval_request',
       'system_announcement'

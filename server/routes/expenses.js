@@ -177,6 +177,24 @@ router.post('/', [
     const expense = new Expense(expenseData);
     await expense.save();
 
+    // Check for auto-approval based on company settings
+    let isAutoApproved = false;
+    if (company.settings.autoApproveLimit && amountInCompanyCurrency <= company.settings.autoApproveLimit) {
+      // Auto-approve the expense
+      expense.status = 'approved';
+      expense.approvedBy = null; // System approval
+      expense.approvedAt = new Date();
+      expense.approvals.push({
+        approver: null, // System approval
+        status: 'approved',
+        comments: `Auto-approved: Amount (${company.currency} ${amountInCompanyCurrency}) is within auto-approve limit (${company.currency} ${company.settings.autoApproveLimit})`,
+        approvedAt: new Date(),
+        step: 0
+      });
+      await expense.save();
+      isAutoApproved = true;
+    }
+
     // TODO: Add approval flow creation after fixing schema populate issues
     // const user = await User.findById(req.user._id).populate('company');
     // const approvalRule = await ApprovalRule.findOne({
@@ -191,13 +209,25 @@ router.post('/', [
     const createdExpense = await Expense.findById(expense._id)
       .populate('employee', 'firstName lastName email');
 
-    // Send notification to managers and admins
+    // Send notifications based on approval status
     const io = req.app.get('io');
     if (io) {
       try {
-        await NotificationService.createExpenseSubmittedNotification(createdExpense, io);
+        if (isAutoApproved) {
+          // Send auto-approval notification to employee
+          await NotificationService.createExpenseApprovedNotification(
+            createdExpense, 
+            { firstName: 'System', lastName: 'Auto-Approval' }, 
+            io
+          );
+          // Also notify managers/admins about the auto-approval
+          await NotificationService.createAutoApprovalNotification(createdExpense, io);
+        } else {
+          // Send submission notification to managers and admins
+          await NotificationService.createExpenseSubmittedNotification(createdExpense, io);
+        }
       } catch (notificationError) {
-        console.error('Error sending expense submission notification:', notificationError);
+        console.error('Error sending notification:', notificationError);
         // Don't fail the expense creation if notification fails
       }
     }
@@ -364,6 +394,63 @@ router.get('/:id/receipt', auth, async (req, res) => {
     res.sendFile(filePath);
   } catch (error) {
     console.error('Download receipt error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/expenses/:id
+// @desc    Delete expense (only if pending)
+// @access  Private (Employee - own expenses only, Manager/Admin - any expense)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const expense = await Expense.findOne({
+      _id: req.params.id,
+      company: req.user.company
+    });
+
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    // Check permissions
+    if (req.user.role === 'employee' && expense.employee.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'You can only delete your own expenses' });
+    }
+
+    // Only allow deleting pending expenses
+    if (expense.status !== 'pending') {
+      return res.status(400).json({ 
+        message: `Cannot delete ${expense.status} expenses. Only pending expenses can be deleted.` 
+      });
+    }
+
+    // Delete receipt file if it exists
+    if (expense.receipt && expense.receipt.path) {
+      try {
+        await deleteFile(expense.receipt.path);
+      } catch (fileError) {
+        console.error('Error deleting receipt file:', fileError);
+        // Continue with expense deletion even if file deletion fails
+      }
+    }
+
+    // Delete the expense
+    await Expense.findByIdAndDelete(req.params.id);
+
+    // Send notification to managers/admins about the deletion
+    const io = req.app.get('io');
+    if (io) {
+      try {
+        await NotificationService.createExpenseDeletedNotification(expense, req.user, io);
+      } catch (notificationError) {
+        console.error('Error sending expense deletion notification:', notificationError);
+        // Don't fail the deletion if notification fails
+      }
+    }
+
+    res.json({ message: 'Expense deleted successfully' });
+  } catch (error) {
+    console.error('Delete expense error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

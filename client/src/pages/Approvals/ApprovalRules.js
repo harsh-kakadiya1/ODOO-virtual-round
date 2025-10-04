@@ -5,6 +5,7 @@ import Button from '../../components/UI/Button';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Badge from '../../components/UI/Badge';
 import { handleApiError, approvalsAPI } from '../../utils/api';
+import ConditionalRuleBuilder from '../../components/ApprovalRules/ConditionalRuleBuilder';
 
 const ApprovalRules = () => {
   const [rules, setRules] = useState([]);
@@ -27,6 +28,11 @@ const ApprovalRules = () => {
         isRequired: true
       }
     ],
+    approvalLogic: {
+      type: 'sequential',
+      conditionalRules: [],
+      ruleOperator: 'OR'
+    },
     priority: 1,
     isActive: true
   });
@@ -292,6 +298,57 @@ const ApprovalRules = () => {
                   placeholder="Leave empty for no threshold"
                 />
               </div>
+
+              {/* Approval Logic Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Approval Logic Type
+                </label>
+                <select
+                  value={formData.approvalLogic.type}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    approvalLogic: {
+                      ...formData.approvalLogic,
+                      type: e.target.value
+                    }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="sequential">Sequential (Step by Step)</option>
+                  <option value="percentage">Percentage Based</option>
+                  <option value="specific_approver">Specific Approver</option>
+                  <option value="hybrid">Hybrid (Multiple + Conditional)</option>
+                  <option value="conditional">Conditional Rules Only</option>
+                </select>
+                <p className="text-sm text-gray-500 mt-1">
+                  {formData.approvalLogic.type === 'sequential' && 'Approvers must approve in order'}
+                  {formData.approvalLogic.type === 'percentage' && 'Require a percentage of approvers to approve'}
+                  {formData.approvalLogic.type === 'specific_approver' && 'Auto-approve when specific person approves'}
+                  {formData.approvalLogic.type === 'hybrid' && 'Combine multiple approvers with conditional rules'}
+                  {formData.approvalLogic.type === 'conditional' && 'Use only conditional rules for approval'}
+                </p>
+              </div>
+
+              {/* Conditional Rules Builder */}
+              {(formData.approvalLogic.type === 'conditional' || formData.approvalLogic.type === 'hybrid') && (
+                <div>
+                  <ConditionalRuleBuilder
+                    rules={formData.approvalLogic.conditionalRules || []}
+                    onChange={(rules, operator = 'OR') => setFormData({
+                      ...formData,
+                      approvalLogic: {
+                        ...formData.approvalLogic,
+                        conditionalRules: rules,
+                        ruleOperator: operator
+                      }
+                    })}
+                    availableApprovers={availableApprovers}
+                    availableCategories={['Travel', 'Meals', 'Office Supplies', 'Transportation', 'Accommodation', 'Other']}
+                    availableDepartments={['Engineering', 'Sales', 'Marketing', 'HR', 'Finance', 'Operations']}
+                  />
+                </div>
+              )}
 
               {/* Approval Steps */}
               <div>

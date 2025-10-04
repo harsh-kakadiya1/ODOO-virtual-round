@@ -76,25 +76,76 @@ class NotificationService {
   }
 
   /**
+   * Create auto-approval notification for managers/admins
+   * @param {Object} expense - Expense object
+   * @param {Object} io - Socket.IO instance
+   */
+  static async createAutoApprovalNotification(expense, io = null) {
+    try {
+      // Get managers and admins in the company
+      const managersAndAdmins = await User.find({
+        company: expense.company,
+        role: { $in: ['manager', 'admin'] }
+      });
+
+      const notifications = [];
+
+      for (const user of managersAndAdmins) {
+        const notificationData = {
+          recipient: user._id,
+          sender: expense.employee,
+          company: expense.company,
+          type: 'expense_auto_approved',
+          title: 'Expense Auto-Approved',
+          message: `An expense of ${expense.currency} ${expense.amount} by ${expense.employee.firstName} ${expense.employee.lastName} has been automatically approved (within auto-approve limit).`,
+          data: {
+            expenseId: expense._id,
+            amount: expense.amount,
+            currency: expense.currency,
+            employeeName: `${expense.employee.firstName} ${expense.employee.lastName}`,
+            isAutoApproved: true
+          },
+          priority: 'low'
+        };
+
+        const notification = await this.createNotification(notificationData, io);
+        notifications.push(notification);
+      }
+
+      return notifications;
+    } catch (error) {
+      console.error('Error creating auto-approval notification:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create expense approval notification
    * @param {Object} expense - Expense object
-   * @param {Object} approver - User who approved
+   * @param {Object} approver - User who approved (or system object for auto-approval)
    * @param {Object} io - Socket.IO instance
    */
   static async createExpenseApprovedNotification(expense, approver, io = null) {
     try {
+      const isSystemApproval = !approver._id;
+      const approverName = isSystemApproval ? 'System Auto-Approval' : `${approver.firstName} ${approver.lastName}`;
+      const message = isSystemApproval 
+        ? `Your expense of ${expense.currency} ${expense.amount} has been automatically approved (within auto-approve limit).`
+        : `Your expense of ${expense.currency} ${expense.amount} has been approved by ${approverName}.`;
+
       const notificationData = {
         recipient: expense.employee,
-        sender: approver._id,
+        sender: isSystemApproval ? expense.employee : approver._id, // Use employee as sender for system approvals
         company: expense.company,
         type: 'expense_approved',
-        title: 'Expense Approved',
-        message: `Your expense of ${expense.currency} ${expense.amount} has been approved by ${approver.firstName} ${approver.lastName}.`,
+        title: isSystemApproval ? 'Expense Auto-Approved' : 'Expense Approved',
+        message: message,
         data: {
           expenseId: expense._id,
           amount: expense.amount,
           currency: expense.currency,
-          managerName: `${approver.firstName} ${approver.lastName}`
+          managerName: approverName,
+          isAutoApproved: isSystemApproval
         },
         priority: 'medium'
       };
@@ -140,6 +191,51 @@ class NotificationService {
   }
 
   /**
+   * Create expense deletion notification for managers/admins
+   * @param {Object} expense - Expense object
+   * @param {Object} deleter - User who deleted the expense
+   * @param {Object} io - Socket.IO instance
+   */
+  static async createExpenseDeletedNotification(expense, deleter, io = null) {
+    try {
+      // Get managers and admins in the company
+      const managersAndAdmins = await User.find({
+        company: expense.company,
+        role: { $in: ['manager', 'admin'] }
+      });
+
+      const notifications = [];
+
+      for (const user of managersAndAdmins) {
+        const notificationData = {
+          recipient: user._id,
+          sender: deleter._id,
+          company: expense.company,
+          type: 'expense_deleted',
+          title: 'Expense Deleted',
+          message: `An expense of ${expense.currency} ${expense.amount} by ${expense.employee.firstName} ${expense.employee.lastName} has been deleted by ${deleter.firstName} ${deleter.lastName}.`,
+          data: {
+            expenseId: expense._id,
+            amount: expense.amount,
+            currency: expense.currency,
+            employeeName: `${expense.employee.firstName} ${expense.employee.lastName}`,
+            deletedBy: `${deleter.firstName} ${deleter.lastName}`
+          },
+          priority: 'medium'
+        };
+
+        const notification = await this.createNotification(notificationData, io);
+        notifications.push(notification);
+      }
+
+      return notifications;
+    } catch (error) {
+      console.error('Error creating expense deletion notification:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create approval request notification
    * @param {Object} expense - Expense object
    * @param {Object} approver - User who needs to approve
@@ -154,10 +250,10 @@ class NotificationService {
         type: 'approval_request',
         title: 'Approval Required',
         message: `You have a pending expense approval request for ${expense.currency} ${expense.amount}.`,
-        data: {
-          expenseId: expense._id,
-          amount: expense.amount,
-          currency: expense.currency,
+    data: {
+      expenseId: expense._id,
+      amount: expense.amount,
+      currency: expense.currency,
           employeeName: `${expense.employee.firstName} ${expense.employee.lastName}`
         },
         priority: 'high'

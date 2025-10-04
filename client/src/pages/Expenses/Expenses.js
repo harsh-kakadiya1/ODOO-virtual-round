@@ -18,6 +18,8 @@ const Expenses = () => {
   const [filter, setFilter] = useState('all');
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [approvalRules, setApprovalRules] = useState([]);
   const [selectedRule, setSelectedRule] = useState('');
@@ -44,21 +46,32 @@ const Expenses = () => {
     }
   };
 
-  const handleDeleteExpense = async (expenseId, description) => {
-    if (!window.confirm(`Are you sure you want to delete "${description}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteClick = (expense) => {
+    setExpenseToDelete(expense);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteExpense = async () => {
+    if (!expenseToDelete) return;
 
     try {
-      setDeleteLoading(expenseId);
-      await expensesAPI.deleteExpense(expenseId);
-      setExpenses(expenses.filter(expense => expense._id !== expenseId));
+      setDeleteLoading(expenseToDelete._id);
+      await expensesAPI.deleteExpense(expenseToDelete._id);
+      setExpenses(expenses.filter(expense => expense._id !== expenseToDelete._id));
+      toast.success('Expense deleted successfully!');
+      setShowDeleteModal(false);
+      setExpenseToDelete(null);
     } catch (error) {
       console.error('Error deleting expense:', error);
-      alert('Failed to delete expense. Please try again.');
+      toast.error('Failed to delete expense. Please try again.');
     } finally {
       setDeleteLoading(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setExpenseToDelete(null);
   };
 
   const getStatusBadgeColor = (status) => {
@@ -84,8 +97,18 @@ const Expenses = () => {
 
   const canDeleteExpense = (expense) => {
     if (!expense || !user) return false;
-    const employeeId = expense.employee?._id || expense.employee;
-    return expense.status === 'pending' && employeeId === user._id;
+    
+    // Only allow deleting pending expenses
+    if (expense.status !== 'pending') return false;
+    
+    // Employees can only delete their own expenses
+    if (user.role === 'employee') {
+      const employeeId = expense.employee?._id || expense.employee;
+      return employeeId === user._id;
+    }
+    
+    // Managers and admins can delete any pending expense
+    return user.role === 'manager' || user.role === 'admin';
   };
 
   const canCreateApprovalFlow = (expense) => {
@@ -266,9 +289,16 @@ const Expenses = () => {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <Badge className={getStatusBadgeColor(expense.status)}>
-                          {expense.status.charAt(0).toUpperCase() + expense.status.slice(1)}
-                        </Badge>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={getStatusBadgeColor(expense.status)}>
+                            {expense.status.charAt(0).toUpperCase() + expense.status.slice(1)}
+                          </Badge>
+                          {expense.status === 'approved' && expense.approvals?.some(a => !a.approver) && (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                              ⚡ Auto
+                            </span>
+                          )}
+                        </div>
                         {expense.status === 'approved' && expense.approvedAt && (
                           <div className="text-xs text-gray-500 mt-1">
                             {formatDate(expense.approvedAt)}
@@ -312,7 +342,7 @@ const Expenses = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDeleteExpense(expense._id, expense.description)}
+                              onClick={() => handleDeleteClick(expense)}
                               disabled={deleteLoading === expense._id}
                               className="text-red-600 hover:text-red-700 hover:border-red-300"
                             >
@@ -384,6 +414,64 @@ const Expenses = () => {
                   <GitBranch className="h-4 w-4 mr-2" />
                 )}
                 Create Flow
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && expenseToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900">Delete Expense</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-sm text-gray-700">
+                Are you sure you want to delete the expense <strong>"{expenseToDelete.description}"</strong>?
+              </p>
+              <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <div className="text-sm text-gray-600">
+                  <div><strong>Amount:</strong> <Money amount={expenseToDelete.amount} currency={expenseToDelete.currency} /></div>
+                  <div><strong>Category:</strong> {expenseToDelete.category}</div>
+                  <div><strong>Date:</strong> {formatDate(expenseToDelete.expenseDate)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+                disabled={deleteLoading === expenseToDelete._id}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDeleteExpense}
+                disabled={deleteLoading === expenseToDelete._id}
+                className="bg-red-600 text-white hover:bg-red-700 border-red-600"
+              >
+                {deleteLoading === expenseToDelete._id ? (
+                  <>
+                    <LoadingSpinner className="h-4 w-4 mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Expense
+                  </>
+                )}
               </Button>
             </div>
           </div>

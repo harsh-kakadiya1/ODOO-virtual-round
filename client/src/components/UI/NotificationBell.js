@@ -43,8 +43,12 @@ const NotificationBell = () => {
         return '📝';
       case 'expense_approved':
         return '✅';
+      case 'expense_auto_approved':
+        return '⚡';
       case 'expense_rejected':
         return '❌';
+      case 'expense_deleted':
+        return '🗑️';
       case 'approval_request':
         return '⏰';
       default:
@@ -56,8 +60,12 @@ const NotificationBell = () => {
     switch (type) {
       case 'expense_approved':
         return 'text-green-600';
+      case 'expense_auto_approved':
+        return 'text-green-500';
       case 'expense_rejected':
         return 'text-red-600';
+      case 'expense_deleted':
+        return 'text-red-500';
       case 'approval_request':
         return 'text-orange-600';
       default:

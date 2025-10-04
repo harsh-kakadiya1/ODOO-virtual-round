@@ -5,6 +5,7 @@ const ApprovalFlow = require('../models/ApprovalFlow');
 const ApprovalRule = require('../models/ApprovalRule');
 const { auth, authorize } = require('../middleware/auth');
 const NotificationService = require('../utils/notificationService');
+const ConditionalApprovalEngine = require('../utils/conditionalApprovalEngine');
 
 const router = express.Router();
 
@@ -115,6 +116,17 @@ router.post('/:expenseId/approve', [
         .populate('employee', 'firstName lastName email')
         .populate('approvals.approver', 'firstName lastName email');
 
+      // Send notification to employee about approval
+      const io = req.app.get('io');
+      if (io) {
+        try {
+          await NotificationService.createExpenseApprovedNotification(updatedExpense, req.user, io);
+        } catch (notificationError) {
+          console.error('Error sending expense approval notification:', notificationError);
+          // Don't fail the approval if notification fails
+        }
+      }
+
       console.log('Returning approved expense:', updatedExpense._id);
       return res.json(updatedExpense);
     }
@@ -183,8 +195,33 @@ router.post('/:expenseId/approve', [
       stepCompleted = true;
     }
 
-    // If step is completed, move to next step or complete flow
+    // If step is completed, check for conditional rules before proceeding
     if (stepCompleted) {
+      // Check for conditional approval rules
+      const rule = await ApprovalRule.findById(approvalFlow.rule);
+      if (rule && rule.approvalLogic.type === 'conditional') {
+        const io = req.app.get('io');
+        const conditionalResult = await ConditionalApprovalEngine.processConditionalApproval(
+          expense, 
+          approvalFlow, 
+          rule, 
+          io
+        );
+        
+        if (conditionalResult.success) {
+          const updatedExpense = await Expense.findById(expenseId)
+            .populate('employee', 'firstName lastName email')
+            .populate('approvals.approver', 'firstName lastName email');
+          
+          return res.json({
+            message: conditionalResult.reason,
+            expense: updatedExpense,
+            conditionalAction: conditionalResult.action,
+            nextStep: approvalFlow.currentStep
+          });
+        }
+      }
+      
       if (approvalFlow.currentStep < approvalFlow.totalSteps) {
         // Move to next step
         approvalFlow.currentStep += 1;
@@ -321,6 +358,17 @@ router.post('/:expenseId/reject', [
       const updatedExpense = await Expense.findById(expenseId)
         .populate('employee', 'firstName lastName email')
         .populate('approvals.approver', 'firstName lastName email');
+
+      // Send notification to employee about rejection
+      const io = req.app.get('io');
+      if (io) {
+        try {
+          await NotificationService.createExpenseRejectedNotification(updatedExpense, req.user, reason, io);
+        } catch (notificationError) {
+          console.error('Error sending expense rejection notification:', notificationError);
+          // Don't fail the rejection if notification fails
+        }
+      }
 
       return res.json(updatedExpense);
     }
@@ -612,6 +660,19 @@ router.post('/flows/:id/approve', [
         expense.approvedBy = req.user._id;
         expense.approvedAt = new Date();
         await expense.save();
+
+        // Send notification to employee about approval
+        const io = req.app.get('io');
+        if (io) {
+          try {
+            const populatedExpense = await Expense.findById(flow.expense)
+              .populate('employee', 'firstName lastName email');
+            await NotificationService.createExpenseApprovedNotification(populatedExpense, req.user, io);
+          } catch (notificationError) {
+            console.error('Error sending expense approval notification:', notificationError);
+            // Don't fail the approval if notification fails
+          }
+        }
       }
     }
 
@@ -684,6 +745,19 @@ router.post('/flows/:id/reject', [
     expense.rejectedAt = new Date();
     expense.rejectionReason = comment;
     await expense.save();
+
+    // Send notification to employee about rejection
+    const io = req.app.get('io');
+    if (io) {
+      try {
+        const populatedExpense = await Expense.findById(flow.expense)
+          .populate('employee', 'firstName lastName email');
+        await NotificationService.createExpenseRejectedNotification(populatedExpense, req.user, comment, io);
+      } catch (notificationError) {
+        console.error('Error sending expense rejection notification:', notificationError);
+        // Don't fail the rejection if notification fails
+      }
+    }
 
     await flow.save();
 
