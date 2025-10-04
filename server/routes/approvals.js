@@ -3,9 +3,11 @@ const { body, validationResult } = require('express-validator');
 const Expense = require('../models/Expense');
 const ApprovalFlow = require('../models/ApprovalFlow');
 const ApprovalRule = require('../models/ApprovalRule');
+const User = require('../models/User');
 const { auth, authorize } = require('../middleware/auth');
 const NotificationService = require('../utils/notificationService');
 const ConditionalApprovalEngine = require('../utils/conditionalApprovalEngine');
+const HierarchicalApprovalEngine = require('../utils/hierarchicalApprovalEngine');
 
 const router = express.Router();
 
@@ -142,6 +144,36 @@ router.post('/:expenseId/approve', [
     console.log('Approval flow found:', approvalFlow ? 'YES' : 'NO');
     if (approvalFlow) {
       console.log('Current step:', approvalFlow.currentStep);
+      
+      // Check if this is a hierarchical approval
+      if (approvalFlow.rule.approvalLogic.type === 'hierarchical') {
+        console.log('Processing hierarchical approval...');
+        
+        const result = await HierarchicalApprovalEngine.processHierarchicalApproval(
+          expense,
+          approvalFlow,
+          approvalFlow.rule,
+          req.user,
+          'approved',
+          comments,
+          req.app.get('io')
+        );
+        
+        console.log('Hierarchical approval result:', result);
+        
+        if (result.success) {
+          const updatedExpense = await Expense.findById(expenseId)
+            .populate('employee', 'firstName lastName email')
+            .populate('approvals.approver', 'firstName lastName email');
+          
+          return res.json({
+            ...updatedExpense.toObject(),
+            approvalResult: result
+          });
+        } else {
+          return res.status(400).json({ message: result.message || 'Approval failed' });
+        }
+      }
       console.log('Total steps:', approvalFlow.totalSteps);
       console.log('Flow status:', approvalFlow.status);
     }
@@ -484,7 +516,7 @@ router.post('/rules', [
   authorize('admin'),
   body('name').notEmpty().withMessage('Rule name is required'),
   body('approvalSteps').isArray().withMessage('Approval steps must be an array'),
-  body('approvalLogic.type').isIn(['sequential', 'percentage', 'specific_approver', 'hybrid']).withMessage('Invalid approval logic type')
+  body('approvalLogic.type').isIn(['sequential', 'percentage', 'specific_approver', 'hybrid', 'hierarchical']).withMessage('Invalid approval logic type')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -520,6 +552,43 @@ router.post('/rules', [
     res.status(201).json(createdRule);
   } catch (error) {
     console.error('Create approval rule error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/approvals/available-approvers
+// @desc    Get available approvers with hierarchical information
+// @access  Private (Admin, Manager)
+router.get('/available-approvers', [auth, authorize('admin', 'manager')], async (req, res) => {
+  try {
+    const users = await User.find({
+      company: req.user.company,
+      role: { $in: ['admin', 'manager', 'employee'] },
+      isActive: true
+    })
+    .populate('department', 'name')
+    .select('firstName lastName email role department manager isManagerApprover')
+    .sort({ role: 1, firstName: 1 });
+
+    // Organize users by hierarchy
+    const organizedUsers = {
+      admins: users.filter(user => user.role === 'admin'),
+      managers: users.filter(user => user.role === 'manager'),
+      employees: users.filter(user => user.role === 'employee')
+    };
+
+    res.json({
+      success: true,
+      data: users,
+      organized: organizedUsers,
+      hierarchy: {
+        totalAdmins: organizedUsers.admins.length,
+        totalManagers: organizedUsers.managers.length,
+        totalEmployees: organizedUsers.employees.length
+      }
+    });
+  } catch (error) {
+    console.error('Error getting available approvers:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

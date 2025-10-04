@@ -4,6 +4,7 @@
   "description": "Frontend React application for Expense Management System",
   "private": true,
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^14.5.1",

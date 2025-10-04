@@ -60,8 +60,8 @@ const approvalRuleSchema = new mongoose.Schema({
   approvalLogic: {
     type: {
       type: String,
-      enum: ['sequential', 'percentage', 'specific_approver', 'hybrid', 'conditional'],
-      default: 'sequential'
+      enum: ['sequential', 'percentage', 'specific_approver', 'hybrid', 'conditional', 'hierarchical'],
+      default: 'hierarchical'
     },
     percentageRequired: {
       type: Number,
@@ -76,6 +76,30 @@ const approvalRuleSchema = new mongoose.Schema({
     autoApproveOnSpecific: {
       type: Boolean,
       default: false
+    },
+    // Hierarchical approval settings
+    hierarchicalSettings: {
+      requireAllSelected: {
+        type: Boolean,
+        default: true
+      },
+      allowPartialApproval: {
+        type: Boolean,
+        default: false
+      },
+      escalationEnabled: {
+        type: Boolean,
+        default: false
+      },
+      escalationTimeoutHours: {
+        type: Number,
+        default: 72,
+        min: 1
+      },
+      escalationTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
     },
     // Conditional rules for hybrid approval
     conditionalRules: [{
