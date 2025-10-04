@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
@@ -61,13 +61,11 @@ const authReducer = (state, action) => {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Set up axios interceptor for token
+  // Set up api interceptor for token
   useEffect(() => {
     if (state.token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${state.token}`;
       localStorage.setItem('token', state.token);
     } else {
-      delete axios.defaults.headers.common['Authorization'];
       localStorage.removeItem('token');
     }
   }, [state.token]);
@@ -78,7 +76,7 @@ export const AuthProvider = ({ children }) => {
       if (state.token) {
         try {
           dispatch({ type: 'AUTH_START' });
-          const response = await axios.get('/api/auth/me');
+          const response = await api.get('/auth/me');
           dispatch({
             type: 'AUTH_SUCCESS',
             payload: {
@@ -93,17 +91,21 @@ export const AuthProvider = ({ children }) => {
           });
         }
       } else {
-        dispatch({ type: 'AUTH_FAILURE', payload: 'No token found' });
+        // Don't show error when no token exists - this is normal for first visit
+        dispatch({ 
+          type: 'AUTH_FAILURE', 
+          payload: null // Set error to null instead of a message
+        });
       }
     };
 
     loadUser();
-  }, []);
+  }, [state.token]);
 
   const login = async (email, password) => {
     try {
       dispatch({ type: 'AUTH_START' });
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password });
       
       dispatch({
         type: 'AUTH_SUCCESS',
@@ -114,19 +116,27 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
+      const errors = error.response?.data?.errors || [];
+      
       dispatch({
         type: 'AUTH_FAILURE',
         payload: message
       });
-      toast.error(message);
-      return { success: false, error: message };
+      
+      if (errors.length > 0) {
+        // Don't show toast for field-specific errors
+        return { success: false, error: message, errors };
+      } else {
+        toast.error(message);
+        return { success: false, error: message };
+      }
     }
   };
 
   const register = async (userData) => {
     try {
       dispatch({ type: 'AUTH_START' });
-      const response = await axios.post('/api/auth/register', userData);
+      const response = await api.post('/auth/register', userData);
       
       dispatch({
         type: 'AUTH_SUCCESS',
@@ -137,12 +147,20 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Registration failed';
+      const errors = error.response?.data?.errors || [];
+      
       dispatch({
         type: 'AUTH_FAILURE',
         payload: message
       });
-      toast.error(message);
-      return { success: false, error: message };
+      
+      if (errors.length > 0) {
+        // Don't show toast for field-specific errors
+        return { success: false, error: message, errors };
+      } else {
+        toast.error(message);
+        return { success: false, error: message };
+      }
     }
   };
 
