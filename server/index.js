@@ -26,6 +26,8 @@ app.use('/api/companies', require('./routes/companies'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/approvals', require('./routes/approvals'));
 app.use('/api/approval-rules', require('./routes/approvalRules'));
+app.use('/api/ocr', require('./routes/ocr'));
+app.use('/api/currency', require('./routes/currency'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -40,10 +42,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/expense_management', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/expense_management')
 .then(() => console.log('MongoDB connected successfully'))
 .catch(err => console.error('MongoDB connection error:', err));
 

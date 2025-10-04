@@ -7,6 +7,7 @@ import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import { Plus, Receipt, Eye, Edit, Trash2, Filter, GitBranch } from 'lucide-react';
 import { expensesAPI, approvalsAPI, formatCurrency, formatDate, handleApiError } from '../../utils/api';
 import { toast } from 'react-hot-toast';
+import Money from '../../components/UI/Money';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Expenses = () => {
@@ -261,11 +262,11 @@ const Expenses = () => {
                       </td>
                       <td className="py-4 px-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {formatCurrency(expense.amount || 0, expense.currency || 'USD')}
+                          <Money amount={expense.amount || 0} currency={expense.currency || 'USD'} />
                         </div>
                         {expense.amountInCompanyCurrency && expense.amountInCompanyCurrency !== expense.amount && (
                           <div className="text-xs text-gray-500">
-                            Company: {formatCurrency(expense.amountInCompanyCurrency)}
+                            Company: <Money amount={expense.amountInCompanyCurrency} currency={expense.currency || 'USD'} />
                           </div>
                         )}
                       </td>

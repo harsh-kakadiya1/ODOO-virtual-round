@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Badge from '../../components/UI/Badge';
 import { Plus, Users as UsersIcon, Edit, Trash2, Mail, Phone, Building, User } from 'lucide-react';
 import { usersAPI, handleApiError } from '../../utils/api';
-import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const Users = () => {
@@ -51,16 +51,12 @@ const Users = () => {
     }
   };
 
-  const getRoleBadgeColor = (role) => {
+  const getRoleBadgeVariant = (role) => {
     switch (role) {
-      case 'admin':
-        return 'bg-red-100 text-red-800';
-      case 'manager':
-        return 'bg-blue-100 text-blue-800';
-      case 'employee':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'admin': return 'error';
+      case 'manager': return 'warning';
+      case 'employee': return 'success';
+      default: return 'secondary';
     }
   };
 
@@ -173,7 +169,7 @@ const Users = () => {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <Badge className={getRoleBadgeColor(user.role)}>
+                        <Badge variant={getRoleBadgeVariant(user.role)}>
                           {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                         </Badge>
                       </td>

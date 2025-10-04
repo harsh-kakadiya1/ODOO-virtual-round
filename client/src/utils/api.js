@@ -1,9 +1,10 @@
 import axios from 'axios';
+import { convertAmount, fetchRates } from '../services/currencyService';
 
 // Create axios instance with base configuration
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || '/api',
-  timeout: 10000,
+  timeout: 60000, // Increased timeout to 60 seconds for OCR processing
   headers: {
     'Content-Type': 'application/json',
   },
@@ -83,6 +84,28 @@ export const approvalsAPI = {
   getAvailableApprovers: () => api.get('/approval-rules/available-approvers'),
 };
 
+export const ocrAPI = {
+  extractReceiptData: (imageFile) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api.post('/ocr/extract-receipt', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  extractText: (imageFile) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api.post('/ocr/extract-text', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  getStatus: () => api.get('/ocr/status'),
+};
+
 // Utility functions
 export const handleApiError = (error) => {
   const message = error.response?.data?.message || 'An error occurred';
@@ -110,6 +133,20 @@ export const formatCurrency = (amount, currency = 'USD') => {
     style: 'currency',
     currency: currency,
   }).format(amount);
+};
+
+// Convert amount from baseCurrency to targetCurrency and format
+export const convertAndFormat = async (amount, baseCurrency = 'USD', targetCurrency = 'USD') => {
+  if (!amount) return formatCurrency(0, targetCurrency);
+  if (baseCurrency === targetCurrency) return formatCurrency(amount, targetCurrency);
+  try {
+    const converted = await convertAmount(amount, baseCurrency, targetCurrency);
+    return formatCurrency(converted, targetCurrency);
+  } catch (e) {
+    // fallback to formatting original amount
+    console.error('convertAndFormat error', e);
+    return formatCurrency(amount, targetCurrency);
+  }
 };
 
 export const formatDate = (date) => {

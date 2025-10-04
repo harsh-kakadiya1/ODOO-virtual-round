@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Ca
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import { Receipt, Save, ArrowLeft, Upload, X } from 'lucide-react';
+import OCRProcessor from '../../components/UI/OCRProcessor';
+import { Receipt, Save, ArrowLeft, Upload, X, Scan } from 'lucide-react';
 import { expensesAPI, companiesAPI } from '../../utils/api';
 // import { useAuth } from '../../contexts/AuthContext';
 
@@ -18,6 +19,8 @@ const ExpenseForm = () => {
   const [company, setCompany] = useState(null);
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
+  const [showOCR, setShowOCR] = useState(false);
+  const [ocrError, setOcrError] = useState(null);
   const [formData, setFormData] = useState({
     category: '',
     amount: '',
@@ -135,6 +138,55 @@ const ExpenseForm = () => {
         receipt: ''
       }));
     }
+  };
+
+  const handleOCRDataExtracted = (data) => {
+    setOcrError(null);
+    
+    // Auto-fill form fields with extracted data
+    const updates = {};
+    
+    if (data.merchant) {
+      updates.description = data.merchant;
+    }
+    
+    if (data.total) {
+      updates.amount = data.total.toString();
+    }
+    
+    if (data.currency) {
+      updates.currency = data.currency;
+    }
+    
+    if (data.date) {
+      updates.expenseDate = data.date;
+    }
+    
+    // If we have items, create a more detailed description
+    if (data.items && data.items.length > 0) {
+      const itemsText = data.items.map(item => 
+        `${item.description} - ${item.amount}`
+      ).join(', ');
+      updates.description = `${data.merchant || 'Receipt'}: ${itemsText}`;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      ...updates
+    }));
+    
+    // Clear any existing errors for updated fields
+    const newErrors = { ...errors };
+    Object.keys(updates).forEach(key => {
+      if (newErrors[key]) {
+        delete newErrors[key];
+      }
+    });
+    setErrors(newErrors);
+  };
+
+  const handleOCRError = (error) => {
+    setOcrError(error);
   };
 
   const validateForm = () => {
@@ -330,6 +382,37 @@ const ExpenseForm = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Receipt
               </label>
+              
+              {/* OCR Toggle Button */}
+              <div className="mb-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowOCR(!showOCR)}
+                  className="flex items-center"
+                >
+                  <Scan className="h-4 w-4 mr-2" />
+                  {showOCR ? 'Hide AI Receipt Scanner' : 'Use AI Receipt Scanner'}
+                </Button>
+              </div>
+
+              {/* OCR Section */}
+              {showOCR && (
+                <div className="mb-4">
+                  <OCRProcessor
+                    onDataExtracted={handleOCRDataExtracted}
+                    onError={handleOCRError}
+                  />
+                  {ocrError && (
+                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm text-red-600">{ocrError}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Traditional File Upload */}
               {(!receiptPreview && !receiptFile) ? (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                   <div className="text-center">

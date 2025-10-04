@@ -20,24 +20,32 @@ class CurrencyConverter {
     }
 
     try {
+      // Primary provider
       const response = await axios.get(`${this.baseUrl}/${fromCurrency}`);
       const rates = response.data.rates;
-      const rate = rates[toCurrency];
+      const rate = rates && rates[toCurrency];
 
-      if (!rate) {
-        throw new Error(`Exchange rate not found for ${fromCurrency} to ${toCurrency}`);
+      if (rate) {
+        this.cache.set(cacheKey, { rate, timestamp: Date.now() });
+        return rate;
       }
 
-      // Cache the result
-      this.cache.set(cacheKey, {
-        rate,
-        timestamp: Date.now()
-      });
+      // Try fallback provider: exchangerate.host
+      try {
+        const fallbackUrl = `https://api.exchangerate.host/latest?base=${fromCurrency}`;
+        const fb = await axios.get(fallbackUrl);
+        const fbRate = fb.data?.rates?.[toCurrency];
+        if (fbRate) {
+          this.cache.set(cacheKey, { rate: fbRate, timestamp: Date.now() });
+          return fbRate;
+        }
+      } catch (fbErr) {
+        console.warn('Fallback rate provider failed:', fbErr.message || fbErr);
+      }
 
-      return rate;
+      throw new Error(`Exchange rate not found for ${fromCurrency} to ${toCurrency}`);
     } catch (error) {
-      console.error('Currency conversion error:', error.message);
-      
+      console.error('Currency conversion error:', error.message || error);
       // Fallback to 1:1 ratio if API fails
       console.warn(`Using fallback rate of 1 for ${fromCurrency} to ${toCurrency}`);
       return 1;

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Card';
 import { Receipt, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import Money from '../../components/UI/Money';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -10,7 +11,7 @@ const Dashboard = () => {
   const stats = [
     {
       name: 'Total Expenses',
-      value: '$0.00',
+      value: <Money amount={0} currency={'USD'} />,
       change: '0',
       changeType: 'neutral',
       icon: Receipt,
@@ -37,7 +38,7 @@ const Dashboard = () => {
     },
     {
       name: 'Total Reimbursed',
-      value: '$0.00',
+      value: <Money amount={0} currency={'USD'} />,
       change: '0',
       changeType: 'neutral',
       icon: DollarSign,
