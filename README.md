@@ -83,7 +83,7 @@ A comprehensive expense management platform built with MERN stack, designed to s
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/harsh-kakadiya1/ODOO-virtual-round
 cd expense-management-system
 ```
 
@@ -432,11 +432,11 @@ For support and questions:
 - ✅ **Complete email notification system**
 - ✅ **Automated user credential management**
 - ✅ **Password reset functionality**
+- ✅ **Receipt OCR integration**
+- ✅ **Advanced approval rules**
 
 ### Phase 2 (Next)
 - 🔄 Complete expense form implementation
-- 🔄 Receipt OCR integration
-- 🔄 Advanced approval rules
 - 🔄 Dashboard analytics
 - 🔄 Email notification customization
 - 🔄 Batch user operations
@@ -450,5 +450,4 @@ For support and questions:
 - 📧 Advanced email templates and branding
 
 ---
-
-**Happy Coding! 🚀**
+_made by team PARIVARTAN_
