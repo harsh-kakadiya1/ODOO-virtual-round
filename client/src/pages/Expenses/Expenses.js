@@ -18,7 +18,7 @@ const Expenses = () => {
 
   useEffect(() => {
     fetchExpenses();
-  }, [filter]);
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchExpenses = async () => {
     try {

@@ -5,7 +5,8 @@ import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import { UserPlus, Save, ArrowLeft } from 'lucide-react';
-import { usersAPI } from '../../utils/api';
+import { usersAPI, handleApiError } from '../../utils/api';
+import toast from 'react-hot-toast';
 
 const UserForm = () => {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ const UserForm = () => {
       setManagers(managerUsers);
     } catch (error) {
       console.error('Error fetching managers:', error);
+      toast.error(handleApiError(error));
     }
   };
 
@@ -64,6 +66,7 @@ const UserForm = () => {
       });
     } catch (error) {
       console.error('Error fetching user:', error);
+      toast.error(handleApiError(error));
       navigate('/users');
     } finally {
       setLoading(false);
@@ -128,8 +131,10 @@ const UserForm = () => {
 
       if (isEditing) {
         await usersAPI.updateUser(id, submitData);
+        toast.success('User updated successfully');
       } else {
         await usersAPI.createUser(submitData);
+        toast.success('User created successfully');
       }
 
       navigate('/users');
@@ -137,14 +142,18 @@ const UserForm = () => {
       console.error('Error saving user:', error);
       if (error.response?.data?.message) {
         setErrors({ submit: error.response.data.message });
+        toast.error(error.response.data.message);
       } else if (error.response?.data?.errors) {
         const apiErrors = {};
         error.response.data.errors.forEach(err => {
           apiErrors[err.param || 'submit'] = err.msg;
         });
         setErrors(apiErrors);
+        toast.error('Please fix the form errors');
       } else {
-        setErrors({ submit: 'Failed to save user. Please try again.' });
+        const errorMessage = handleApiError(error);
+        setErrors({ submit: errorMessage });
+        toast.error(errorMessage);
       }
     } finally {
       setLoading(false);

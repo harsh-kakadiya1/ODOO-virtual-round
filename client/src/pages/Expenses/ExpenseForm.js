@@ -6,12 +6,12 @@ import Input from '../../components/UI/Input';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import { Receipt, Save, ArrowLeft, Upload, X } from 'lucide-react';
 import { expensesAPI, companiesAPI } from '../../utils/api';
-import { useAuth } from '../../contexts/AuthContext';
+// import { useAuth } from '../../contexts/AuthContext';
 
 const ExpenseForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth();
+  // const { user } = useAuth(); // Not currently used
   const isEditing = Boolean(id);
 
   const [loading, setLoading] = useState(false);
@@ -59,8 +59,12 @@ const ExpenseForm = () => {
         description: expense.description || '',
         expenseDate: expense.expenseDate ? new Date(expense.expenseDate).toISOString().split('T')[0] : ''
       });
-      if (expense.receipt?.path) {
+      // Only set receipt preview if there's actually a receipt file with a valid path
+      if (expense.receipt && expense.receipt.path && expense.receipt.filename) {
         setReceiptPreview(expense.receipt.path);
+      } else {
+        setReceiptPreview(null);
+        setReceiptFile(null);
       }
     } catch (error) {
       console.error('Error fetching expense:', error);
@@ -123,6 +127,13 @@ const ExpenseForm = () => {
     const fileInput = document.getElementById('receipt');
     if (fileInput) {
       fileInput.value = '';
+    }
+    // Clear any receipt-related errors
+    if (errors.receipt) {
+      setErrors(prev => ({
+        ...prev,
+        receipt: ''
+      }));
     }
   };
 
@@ -319,7 +330,7 @@ const ExpenseForm = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Receipt
               </label>
-              {!receiptPreview ? (
+              {(!receiptPreview && !receiptFile) ? (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                   <div className="text-center">
                     <Upload className="mx-auto h-8 w-8 text-gray-400" />

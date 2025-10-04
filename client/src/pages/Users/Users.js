@@ -5,12 +5,13 @@ import Button from '../../components/UI/Button';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Badge from '../../components/UI/Badge';
 import { Plus, Users as UsersIcon, Edit, Trash2, Mail, Phone, Building, User } from 'lucide-react';
-import { usersAPI } from '../../utils/api';
+import { usersAPI, handleApiError } from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const Users = () => {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasRole } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(null);
@@ -26,6 +27,7 @@ const Users = () => {
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
+      toast.error(handleApiError(error));
     } finally {
       setLoading(false);
     }
@@ -39,10 +41,11 @@ const Users = () => {
     try {
       setDeleteLoading(userId);
       await usersAPI.deleteUser(userId);
-      setUsers(users.filter(user => user._id !== userId));
+      toast.success('User deleted successfully');
+      fetchUsers(); // Refresh the users list instead of filtering locally
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Failed to delete user. Please try again.');
+      toast.error(handleApiError(error));
     } finally {
       setDeleteLoading(null);
     }
@@ -62,14 +65,14 @@ const Users = () => {
   };
 
   const canEditUser = (user) => {
-    if (currentUser.role === 'admin') return true;
-    if (currentUser.role === 'manager' && user.role === 'employee') return true;
+    if (hasRole('admin')) return true;
+    if (hasRole('manager') && user.role === 'employee') return true;
     return currentUser._id === user._id;
   };
 
   const canDeleteUser = (user) => {
     if (currentUser._id === user._id) return false; // Can't delete yourself
-    return currentUser.role === 'admin';
+    return hasRole('admin');
   };
 
   if (loading) {
@@ -87,7 +90,7 @@ const Users = () => {
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-600">Manage team members and their roles</p>
         </div>
-        {(currentUser.role === 'admin') && (
+        {hasRole('admin') && (
           <Link to="/users/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -112,7 +115,7 @@ const Users = () => {
               <p className="mt-1 text-sm text-gray-500">
                 Get started by adding your first team member.
               </p>
-              {currentUser.role === 'admin' && (
+              {hasRole('admin') && (
                 <div className="mt-6">
                   <Link to="/users/new">
                     <Button>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Ca
 import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import { CheckCircle, X, Eye, User, Receipt, MessageSquare } from 'lucide-react';
+import { CheckCircle, X, Eye, User, Receipt } from 'lucide-react';
 import { approvalsAPI, formatCurrency, formatDate } from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -29,9 +29,12 @@ const Approvals = () => {
     try {
       setLoading(true);
       const response = await approvalsAPI.getPendingApprovals();
-      setPendingApprovals(response.data);
+      // Handle the response structure properly - the API returns { expenses: [], pagination: {} }
+      const expenses = response.data.expenses || response.data || [];
+      setPendingApprovals(Array.isArray(expenses) ? expenses : []);
     } catch (error) {
       console.error('Error fetching pending approvals:', error);
+      setPendingApprovals([]); // Set empty array in case of error
     } finally {
       setLoading(false);
     }
@@ -121,7 +124,7 @@ const Approvals = () => {
         <p className="text-gray-600">Review and approve pending expense claims</p>
       </div>
 
-      {pendingApprovals.length === 0 ? (
+      {!Array.isArray(pendingApprovals) || pendingApprovals.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -145,13 +148,13 @@ const Approvals = () => {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
                 <CheckCircle className="h-5 w-5 mr-2" />
-                Pending Approvals ({pendingApprovals.length})
+                Pending Approvals ({Array.isArray(pendingApprovals) ? pendingApprovals.length : 0})
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {pendingApprovals.map((expense) => (
+              {Array.isArray(pendingApprovals) && pendingApprovals.map((expense) => (
                 <div key={expense._id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
