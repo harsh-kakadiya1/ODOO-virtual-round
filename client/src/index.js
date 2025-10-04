@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import './index.css';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import { CurrencyProvider } from './contexts/CurrencyContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -16,7 +17,9 @@ root.render(
       }}
     >
       <AuthProvider>
-        <App />
+        <CurrencyProvider>
+          <App />
+        </CurrencyProvider>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -41,7 +44,7 @@ root.render(
             },
           }}
         />
-      </AuthProvider>
+  </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

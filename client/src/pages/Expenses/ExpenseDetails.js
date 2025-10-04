@@ -5,7 +5,8 @@ import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import { Receipt, ArrowLeft, Edit, Download, User, Calendar, DollarSign, Tag, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { expensesAPI, formatCurrency, formatDate, formatDateTime } from '../../utils/api';
+import { expensesAPI, formatDate, formatDateTime } from '../../utils/api';
+import Money from '../../components/UI/Money';
 import { useAuth } from '../../contexts/AuthContext';
 
 const ExpenseDetails = () => {
@@ -135,11 +136,11 @@ const ExpenseDetails = () => {
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-gray-900">
-                {formatCurrency(expense.amount, expense.currency)}
+                <Money amount={expense.amount} currency={expense.currency} />
               </div>
               {expense.amountInCompanyCurrency !== expense.amount && (
                 <div className="text-sm text-gray-500">
-                  ({formatCurrency(expense.amountInCompanyCurrency)} in company currency)
+                  (<Money amount={expense.amountInCompanyCurrency} currency={expense.currency} /> in company currency)
                 </div>
               )}
             </div>

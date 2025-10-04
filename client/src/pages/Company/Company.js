@@ -189,7 +189,7 @@ const Company = () => {
                   />
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Country <span className="text-red-500">*</span>
+                      Country
                     </label>
                     <select
                       name="country"
@@ -197,6 +197,7 @@ const Company = () => {
                       onChange={handleCountryChange}
                       required
                       className="input"
+                      disabled
                     >
                       <option value="">Select country</option>
                       {countries.map(country => (
@@ -205,6 +206,7 @@ const Company = () => {
                         </option>
                       ))}
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">Country is auto-selected during registration and cannot be changed here.</p>
                   </div>
                 </div>
 

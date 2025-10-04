@@ -10,11 +10,13 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import { clsx } from 'clsx';
 
 const Sidebar = ({ onClose }) => {
   const location = useLocation();
   const { user, hasRole } = useAuth();
+  const { currency } = useCurrency();
 
   const navigation = [
     {
@@ -89,7 +91,7 @@ const Sidebar = ({ onClose }) => {
               {user?.company?.name}
             </p>
             <p className="text-xs text-gray-500">
-              {user?.company?.currency}
+              {currency || user?.company?.currency}
             </p>
           </div>
         </div>
