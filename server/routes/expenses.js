@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Expense = require('../models/Expense');
+const User = require('../models/User');
 const Company = require('../models/Company');
 const { auth, authorize } = require('../middleware/auth');
 const currencyConverter = require('../utils/currencyConverter');

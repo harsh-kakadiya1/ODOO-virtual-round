@@ -40,13 +40,15 @@ router.post('/register', [
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create company
+    // Create company with currency based on country
     const company = new Company({
       name: companyName,
       country,
       currency: currency.toUpperCase(),
       settings: {
-        expenseCategories: ['Travel', 'Meals', 'Office Supplies', 'Transportation', 'Accommodation', 'Other']
+        expenseCategories: ['Travel', 'Meals', 'Office Supplies', 'Transportation', 'Accommodation', 'Other'],
+        autoApproveLimit: 0,
+        requireReceipts: true
       }
     });
     await company.save();
