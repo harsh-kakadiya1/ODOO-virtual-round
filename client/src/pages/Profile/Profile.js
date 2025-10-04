@@ -5,7 +5,7 @@ import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import Badge from '../../components/UI/Badge';
 import { User, Save, Eye, EyeOff, Shield, Building2, Mail, Phone, MapPin, Calendar } from 'lucide-react';
-import { usersAPI, handleApiError } from '../../utils/api';
+import { authAPI, usersAPI, handleApiError } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
@@ -34,7 +34,7 @@ const Profile = () => {
         lastName: user.lastName || '',
         email: user.email || '',
         phone: user.phone || '',
-        department: user.department || '',
+        department: user.department?.name || '',
         employeeId: user.employeeId || ''
       });
     }
@@ -78,14 +78,18 @@ const Profile = () => {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters');
+    if (passwordData.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters');
       return;
     }
 
     setSaving(true);
     try {
-      // Note: This would need a separate password change endpoint
+      await authAPI.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      
       toast.success('Password changed successfully!');
       setPasswordData({
         currentPassword: '',
@@ -287,7 +291,7 @@ const Profile = () => {
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Department</span>
-                    <span className="font-medium">{user?.department || 'Not specified'}</span>
+                    <span className="font-medium">{user?.department?.name || 'Not specified'}</span>
                   </div>
 
                   <div className="flex items-center justify-between">

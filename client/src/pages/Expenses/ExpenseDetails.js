@@ -277,7 +277,7 @@ const ExpenseDetails = () => {
                 <div className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Department
                 </div>
-                <p className="text-gray-900">{expense.employee.department}</p>
+                <p className="text-gray-900">{expense.employee.department.name}</p>
               </div>
             )}
           </CardContent>

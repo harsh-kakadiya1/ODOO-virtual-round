@@ -111,6 +111,7 @@ router.post('/', [
 
     const createdUser = await User.findById(user._id)
       .populate('manager', 'firstName lastName email')
+      .populate('department', 'name description')
       .select('-password');
 
     res.status(201).json(createdUser);
@@ -195,6 +196,7 @@ router.put('/:id', [
 
     const updatedUser = await User.findById(user._id)
       .populate('manager', 'firstName lastName email')
+      .populate('department', 'name description')
       .select('-password');
 
     res.json(updatedUser);

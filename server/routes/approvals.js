@@ -118,13 +118,21 @@ router.post('/:expenseId/approve', [
 
       // Send notification to employee about approval
       const io = req.app.get('io');
+      console.log('Socket.IO instance available:', !!io);
+      console.log('Expense employee:', updatedExpense.employee);
+      console.log('Approver:', req.user.firstName, req.user.lastName);
+      
       if (io) {
         try {
-          await NotificationService.createExpenseApprovedNotification(updatedExpense, req.user, io);
+          console.log('Creating expense approval notification...');
+          const notification = await NotificationService.createExpenseApprovedNotification(updatedExpense, req.user, io);
+          console.log('Notification created successfully:', notification._id);
         } catch (notificationError) {
           console.error('Error sending expense approval notification:', notificationError);
           // Don't fail the approval if notification fails
         }
+      } else {
+        console.log('Socket.IO not available - notification not sent');
       }
 
       console.log('Returning approved expense:', updatedExpense._id);
@@ -287,8 +295,12 @@ router.post('/:expenseId/approve', [
 
     // Send notification to employee about approval
     const io = req.app.get('io');
+    console.log('Flow-based approval - Socket.IO available:', !!io);
+    console.log('Flow-based approval - Expense employee:', updatedExpense.employee);
+    
     if (io) {
       try {
+        console.log('Creating flow-based expense approval notification...');
         await NotificationService.createExpenseApprovedNotification(updatedExpense, req.user, io);
       } catch (notificationError) {
         console.error('Error sending expense approval notification:', notificationError);
