@@ -155,9 +155,10 @@ export const AuthProvider = ({ children }) => {
       });
       
       if (errors.length > 0) {
-        // Don't show toast for field-specific errors
+        // Don't show toast for field-specific errors - let the form handle them
         return { success: false, error: message, errors };
       } else {
+        // Only show toast for generic errors that aren't field-specific
         toast.error(message);
         return { success: false, error: message };
       }

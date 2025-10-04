@@ -4,6 +4,7 @@ const Expense = require('../models/Expense');
 const ApprovalFlow = require('../models/ApprovalFlow');
 const ApprovalRule = require('../models/ApprovalRule');
 const { auth, authorize } = require('../middleware/auth');
+const { sendNotification, notificationTypes, createExpenseNotification } = require('../utils/notificationService');
 
 const router = express.Router();
 
@@ -247,6 +248,21 @@ router.post('/:expenseId/approve', [
       .populate('employee', 'firstName lastName email')
       .populate('approvals.approver', 'firstName lastName email');
 
+    // Send notification to employee about approval
+    const io = req.app.get('io');
+    if (io) {
+      const notification = createExpenseNotification(
+        notificationTypes.EXPENSE_APPROVED,
+        updatedExpense,
+        updatedExpense.employee,
+        req.user
+      );
+      sendNotification(io, {
+        ...notification,
+        companyId: expense.company
+      });
+    }
+
     res.json(updatedExpense);
   } catch (error) {
     console.error('Approve expense error:', error);
@@ -378,6 +394,21 @@ router.post('/:expenseId/reject', [
     const updatedExpense = await Expense.findById(expenseId)
       .populate('employee', 'firstName lastName email')
       .populate('approvals.approver', 'firstName lastName email');
+
+    // Send notification to employee about rejection
+    const io = req.app.get('io');
+    if (io) {
+      const notification = createExpenseNotification(
+        notificationTypes.EXPENSE_REJECTED,
+        updatedExpense,
+        updatedExpense.employee,
+        req.user
+      );
+      sendNotification(io, {
+        ...notification,
+        companyId: expense.company
+      });
+    }
 
     res.json(updatedExpense);
   } catch (error) {

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import Badge from '../../components/UI/Badge';
-import { Plus, Users as UsersIcon, Edit, Trash2, Mail, Phone, Building, User } from 'lucide-react';
+import { Plus, Users as UsersIcon, Edit, Trash2, Mail, Phone, Building, User, Filter } from 'lucide-react';
 import { usersAPI, handleApiError } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -15,6 +15,7 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(null);
+  const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'admin', 'manager', 'employee'
 
   useEffect(() => {
     fetchUsers();
@@ -71,6 +72,23 @@ const Users = () => {
     return hasRole('admin');
   };
 
+  // Filter users based on selected role
+  const filteredUsers = useMemo(() => {
+    if (roleFilter === 'all') return users;
+    return users.filter(user => user.role === roleFilter);
+  }, [users, roleFilter]);
+
+  // Get count for each role
+  const roleCounts = useMemo(() => {
+    const counts = { all: users.length, admin: 0, manager: 0, employee: 0 };
+    users.forEach(user => {
+      if (counts[user.role] !== undefined) {
+        counts[user.role]++;
+      }
+    });
+    return counts;
+  }, [users]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-64">
@@ -96,7 +114,63 @@ const Users = () => {
         )}
       </div>
 
-      {users.length === 0 ? (
+      {/* Role Filter Buttons */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <Filter className="h-4 w-4 text-gray-600" />
+            <span className="text-sm font-medium text-gray-700">Filter by Role:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={roleFilter === 'all' ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setRoleFilter('all')}
+              className="flex items-center"
+            >
+              All Users
+              <Badge variant="secondary" className="ml-2">
+                {roleCounts.all}
+              </Badge>
+            </Button>
+            <Button
+              variant={roleFilter === 'admin' ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setRoleFilter('admin')}
+              className="flex items-center"
+            >
+              Admins
+              <Badge variant="error" className="ml-2">
+                {roleCounts.admin}
+              </Badge>
+            </Button>
+            <Button
+              variant={roleFilter === 'manager' ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setRoleFilter('manager')}
+              className="flex items-center"
+            >
+              Managers
+              <Badge variant="warning" className="ml-2">
+                {roleCounts.manager}
+              </Badge>
+            </Button>
+            <Button
+              variant={roleFilter === 'employee' ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setRoleFilter('employee')}
+              className="flex items-center"
+            >
+              Employees
+              <Badge variant="success" className="ml-2">
+                {roleCounts.employee}
+              </Badge>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {filteredUsers.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -107,11 +181,16 @@ const Users = () => {
           <CardContent>
             <div className="text-center py-12">
               <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No Users Found</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                {users.length === 0 ? 'No Users Found' : `No ${roleFilter === 'all' ? '' : roleFilter + ' '}users found`}
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
-                Get started by adding your first team member.
+                {users.length === 0 
+                  ? 'Get started by adding your first team member.'
+                  : `There are no ${roleFilter === 'all' ? '' : roleFilter + ' '}users to display.`
+                }
               </p>
-              {hasRole('admin') && (
+              {hasRole('admin') && users.length === 0 && (
                 <div className="mt-6">
                   <Link to="/users/new">
                     <Button>
@@ -130,7 +209,7 @@ const Users = () => {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
                 <UsersIcon className="h-5 w-5 mr-2" />
-                Team Members ({users.length})
+                Team Members ({filteredUsers.length}{roleFilter !== 'all' ? ` of ${users.length}` : ''})
               </div>
             </CardTitle>
           </CardHeader>
@@ -148,7 +227,7 @@ const Users = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user._id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-4 px-4">
                         <div className="flex items-center">

@@ -3,11 +3,23 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const http = require('http');
+const socketIo = require('socket.io');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Make io accessible throughout the app
+app.set('io', io);
 
 // Middleware
 app.use(cors());
@@ -62,7 +74,23 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // Join user to their company room for notifications
+  socket.on('join-company', (companyId) => {
+    socket.join(`company-${companyId}`);
+    console.log(`User ${socket.id} joined company room: company-${companyId}`);
+  });
+
+  // Handle user disconnection
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

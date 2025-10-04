@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
@@ -37,23 +38,25 @@ function App() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/expenses" element={<Expenses />} />
-        <Route path="/expenses/new" element={<ExpenseForm />} />
-        <Route path="/expenses/:id" element={<ExpenseDetails />} />
-        <Route path="/expenses/:id/edit" element={<ExpenseForm />} />
-        <Route path="/approvals" element={<Approvals />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/users/new" element={<UserForm />} />
-        <Route path="/users/:id/edit" element={<UserForm />} />
-        <Route path="/company" element={<Company />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </Layout>
+    <NotificationProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/expenses/new" element={<ExpenseForm />} />
+          <Route path="/expenses/:id" element={<ExpenseDetails />} />
+          <Route path="/expenses/:id/edit" element={<ExpenseForm />} />
+          <Route path="/approvals" element={<Approvals />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/users/new" element={<UserForm />} />
+          <Route path="/users/:id/edit" element={<UserForm />} />
+          <Route path="/company" element={<Company />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Layout>
+    </NotificationProvider>
   );
 }
 

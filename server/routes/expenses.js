@@ -9,6 +9,7 @@ const { auth, authorize } = require('../middleware/auth');
 const { uploadReceipt, handleUploadError, deleteFile } = require('../middleware/upload');
 const currencyConverter = require('../utils/currencyConverter');
 const path = require('path');
+const { sendNotification, notificationTypes, createExpenseNotification } = require('../utils/notificationService');
 
 const router = express.Router();
 
@@ -189,6 +190,20 @@ router.post('/', [
 
     const createdExpense = await Expense.findById(expense._id)
       .populate('employee', 'firstName lastName email');
+
+    // Send notification to managers and admins
+    const io = req.app.get('io');
+    if (io) {
+      const notification = createExpenseNotification(
+        notificationTypes.EXPENSE_SUBMITTED,
+        createdExpense,
+        createdExpense.employee
+      );
+      sendNotification(io, {
+        ...notification,
+        companyId: req.user.company
+      });
+    }
 
     res.status(201).json(createdExpense);
   } catch (error) {

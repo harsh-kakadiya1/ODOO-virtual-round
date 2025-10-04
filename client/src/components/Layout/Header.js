@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Bell, User, LogOut, Settings } from 'lucide-react';
+import { Menu, User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationBell from '../UI/NotificationBell';
 
 const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
@@ -46,12 +47,7 @@ const Header = ({ onMenuClick }) => {
           {/* Right side */}
           <div className="flex items-center space-x-4">
             {/* Notifications */}
-            <button
-              type="button"
-              className="p-2 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <Bell className="h-5 w-5" />
-            </button>
+            <NotificationBell />
 
             {/* User menu */}
             <div className="relative" ref={userMenuRef}>
