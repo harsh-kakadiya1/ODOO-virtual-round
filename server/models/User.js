@@ -62,7 +62,14 @@ const userSchema = new mongoose.Schema({
   department: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Department',
-    default: null
+    default: null,
+    validate: {
+      validator: function(value) {
+        // Allow null, undefined, or valid ObjectId
+        return value === null || value === undefined || mongoose.Types.ObjectId.isValid(value);
+      },
+      message: 'Department must be a valid ObjectId or null'
+    }
   },
   employeeId: {
     type: String,
@@ -81,6 +88,24 @@ const userSchema = new mongoose.Schema({
 // Index for better query performance
 userSchema.index({ company: 1, role: 1 });
 userSchema.index({ manager: 1 });
+
+// Handle department field before saving
+userSchema.pre('save', function(next) {
+  // Convert empty strings to null for department field
+  if (this.department === '' || this.department === 'undefined' || this.department === 'null') {
+    this.department = null;
+  }
+  next();
+});
+
+// Handle department field before updating
+userSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next) {
+  const update = this.getUpdate();
+  if (update.department === '' || update.department === 'undefined' || update.department === 'null') {
+    update.department = null;
+  }
+  next();
+});
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
