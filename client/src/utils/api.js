@@ -3,7 +3,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || '/api',
-  timeout: 10000,
+  timeout: 60000, // Increased timeout to 60 seconds for OCR processing
   headers: {
     'Content-Type': 'application/json',
   },
@@ -74,6 +74,28 @@ export const approvalsAPI = {
   createApprovalRule: (ruleData) => api.post('/approvals/rules', ruleData),
   updateApprovalRule: (id, ruleData) => api.put(`/approvals/rules/${id}`, ruleData),
   deleteApprovalRule: (id) => api.delete(`/approvals/rules/${id}`),
+};
+
+export const ocrAPI = {
+  extractReceiptData: (imageFile) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api.post('/ocr/extract-receipt', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  extractText: (imageFile) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api.post('/ocr/extract-text', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  getStatus: () => api.get('/ocr/status'),
 };
 
 // Utility functions
