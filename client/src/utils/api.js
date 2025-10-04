@@ -82,7 +82,7 @@ export const approvalsAPI = {
   updateApprovalRule: (id, ruleData) => api.put(`/approval-rules/${id}`, ruleData),
   deleteApprovalRule: (id) => api.delete(`/approval-rules/${id}`),
   toggleApprovalRule: (id) => api.patch(`/approval-rules/${id}/toggle`),
-  getAvailableApprovers: () => api.get('/approval-rules/available-approvers'),
+  getAvailableApprovers: () => api.get('/approvals/available-approvers'),
 };
 
 export const ocrAPI = {
