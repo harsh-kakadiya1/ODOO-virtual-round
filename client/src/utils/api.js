@@ -70,10 +70,17 @@ export const approvalsAPI = {
   getPendingApprovals: (params) => api.get('/approvals/pending', { params }),
   approveExpense: (expenseId, data) => api.post(`/approvals/${expenseId}/approve`, data),
   rejectExpense: (expenseId, data) => api.post(`/approvals/${expenseId}/reject`, data),
-  getApprovalRules: () => api.get('/approvals/rules'),
-  createApprovalRule: (ruleData) => api.post('/approvals/rules', ruleData),
-  updateApprovalRule: (id, ruleData) => api.put(`/approvals/rules/${id}`, ruleData),
-  deleteApprovalRule: (id) => api.delete(`/approvals/rules/${id}`),
+  getApprovalFlows: (params) => api.get('/approvals/flows', { params }),
+  getApprovalFlow: (id) => api.get(`/approvals/flows/${id}`),
+  createApprovalFlow: (data) => api.post('/approvals/flows', data),
+  approveFlow: (flowId, data) => api.post(`/approvals/flows/${flowId}/approve`, data),
+  rejectFlow: (flowId, data) => api.post(`/approvals/flows/${flowId}/reject`, data),
+  getApprovalRules: () => api.get('/approval-rules'),
+  createApprovalRule: (ruleData) => api.post('/approval-rules', ruleData),
+  updateApprovalRule: (id, ruleData) => api.put(`/approval-rules/${id}`, ruleData),
+  deleteApprovalRule: (id) => api.delete(`/approval-rules/${id}`),
+  toggleApprovalRule: (id) => api.patch(`/approval-rules/${id}/toggle`),
+  getAvailableApprovers: () => api.get('/approval-rules/available-approvers'),
 };
 
 // Utility functions

@@ -4,13 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Ca
 import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import { CheckCircle, X, Eye, User, Receipt } from 'lucide-react';
+import { CheckCircle, X, Eye, User, Receipt, Settings, Workflow } from 'lucide-react';
 import { approvalsAPI, formatCurrency, formatDate } from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
+import ApprovalRules from './ApprovalRules';
+import ApprovalFlows from './ApprovalFlows';
 
 const Approvals = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [currentTab, setCurrentTab] = useState('pending');
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
@@ -20,10 +23,10 @@ const Approvals = () => {
   const [actionType, setActionType] = useState('approve');
 
   useEffect(() => {
-    if (user?.role === 'manager' || user?.role === 'admin') {
+    if (currentTab === 'pending' && (user?.role === 'manager' || user?.role === 'admin')) {
       fetchPendingApprovals();
     }
-  }, [user]);
+  }, [user, currentTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPendingApprovals = async () => {
     try {
@@ -117,13 +120,21 @@ const Approvals = () => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Approvals</h1>
-        <p className="text-gray-600">Review and approve pending expense claims</p>
-      </div>
+  const renderTabContent = () => {
+    switch (currentTab) {
+      case 'pending':
+        return renderPendingApprovals();
+      case 'flows':
+        return <ApprovalFlows />;
+      case 'rules':
+        return <ApprovalRules />;
+      default:
+        return renderPendingApprovals();
+    }
+  };
 
+  const renderPendingApprovals = () => (
+    <>
       {!Array.isArray(pendingApprovals) || pendingApprovals.length === 0 ? (
         <Card>
           <CardHeader>
@@ -256,6 +267,61 @@ const Approvals = () => {
           </CardContent>
         </Card>
       )}
+    </>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Approvals Management</h1>
+        <p className="text-gray-600">Manage expense approvals, flows, and rules</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => setCurrentTab('pending')}
+            className={`${
+              currentTab === 'pending'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center`}
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Pending Approvals
+          </button>
+          <button
+            onClick={() => setCurrentTab('flows')}
+            className={`${
+              currentTab === 'flows'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center`}
+          >
+            <Workflow className="h-4 w-4 mr-2" />
+            Approval Flows
+          </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => setCurrentTab('rules')}
+              className={`${
+                currentTab === 'rules'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center`}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Approval Rules
+            </button>
+          )}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div>
+        {renderTabContent()}
+      </div>
 
       {/* Comment Modal */}
       {showCommentModal && (

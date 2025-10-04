@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const approvalFlowSchema = new mongoose.Schema({
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company',
+    required: true
+  },
   expense: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Expense',
@@ -21,7 +26,7 @@ const approvalFlowSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'completed', 'cancelled', 'escalated'],
+    enum: ['active', 'completed', 'rejected', 'cancelled', 'escalated'],
     default: 'active'
   },
   steps: [{
@@ -72,6 +77,9 @@ const approvalFlowSchema = new mongoose.Schema({
   escalatedTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  completedAt: {
+    type: Date
   },
   finalDecision: {
     status: {

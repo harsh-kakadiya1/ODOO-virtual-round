@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Ca
 import Button from '../../components/UI/Button';
 import Badge from '../../components/UI/Badge';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import { Plus, Receipt, Eye, Edit, Trash2, Filter } from 'lucide-react';
-import { expensesAPI, formatCurrency, formatDate } from '../../utils/api';
+import { Plus, Receipt, Eye, Edit, Trash2, Filter, GitBranch } from 'lucide-react';
+import { expensesAPI, approvalsAPI, formatCurrency, formatDate, handleApiError } from '../../utils/api';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Expenses = () => {
@@ -15,6 +16,11 @@ const Expenses = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [deleteLoading, setDeleteLoading] = useState(null);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [approvalRules, setApprovalRules] = useState([]);
+  const [selectedRule, setSelectedRule] = useState('');
+  const [creatingFlow, setCreatingFlow] = useState(false);
 
   useEffect(() => {
     fetchExpenses();
@@ -79,6 +85,53 @@ const Expenses = () => {
     if (!expense || !user) return false;
     const employeeId = expense.employee?._id || expense.employee;
     return expense.status === 'pending' && employeeId === user._id;
+  };
+
+  const canCreateApprovalFlow = (expense) => {
+    // Only managers and admins can create approval flows for pending expenses without existing flows
+    return (
+      (user?.role === 'manager' || user?.role === 'admin') &&
+      expense.status === 'pending' &&
+      !expense.approvalFlow
+    );
+  };
+
+  const loadApprovalRules = async () => {
+    try {
+      const response = await approvalsAPI.getApprovalRules();
+      setApprovalRules(response.data.rules || []);
+    } catch (error) {
+      console.error('Error loading approval rules:', error);
+    }
+  };
+
+  const handleCreateApprovalFlow = (expense) => {
+    setSelectedExpense(expense);
+    setShowApprovalModal(true);
+    loadApprovalRules();
+  };
+
+  const submitCreateApprovalFlow = async () => {
+    if (!selectedRule || !selectedExpense) return;
+
+    try {
+      setCreatingFlow(true);
+      await approvalsAPI.createApprovalFlow({
+        expenseId: selectedExpense._id,
+        ruleId: selectedRule
+      });
+      
+      toast.success('Approval flow created successfully');
+      setShowApprovalModal(false);
+      setSelectedExpense(null);
+      setSelectedRule('');
+      fetchExpenses(); // Refresh the list
+    } catch (error) {
+      console.error('Error creating approval flow:', error);
+      toast.error(handleApiError(error));
+    } finally {
+      setCreatingFlow(false);
+    }
   };
 
   // Ensure filteredExpenses is always an array
@@ -249,6 +302,16 @@ const Expenses = () => {
                               <Edit className="h-3 w-3" />
                             </Button>
                           )}
+                          {canCreateApprovalFlow(expense) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCreateApprovalFlow(expense)}
+                              className="text-blue-600 hover:text-blue-700 hover:border-blue-300"
+                            >
+                              <GitBranch className="h-3 w-3" />
+                            </Button>
+                          )}
                           {canDeleteExpense(expense) && (
                             <Button
                               variant="outline"
@@ -273,6 +336,62 @@ const Expenses = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Create Approval Flow Modal */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Create Approval Flow
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Create an approval flow for: {selectedExpense?.description}
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Approval Rule
+              </label>
+              <select
+                value={selectedRule}
+                onChange={(e) => setSelectedRule(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select a rule...</option>
+                {approvalRules.map(rule => (
+                  <option key={rule._id} value={rule._id}>
+                    {rule.name} {rule.conditions?.amountThreshold && `(${formatCurrency(rule.conditions.amountThreshold)}+)`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowApprovalModal(false);
+                  setSelectedExpense(null);
+                  setSelectedRule('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitCreateApprovalFlow}
+                disabled={!selectedRule || creatingFlow}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {creatingFlow ? (
+                  <LoadingSpinner className="h-4 w-4 mr-2" />
+                ) : (
+                  <GitBranch className="h-4 w-4 mr-2" />
+                )}
+                Create Flow
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
