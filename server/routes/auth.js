@@ -18,18 +18,29 @@ const generateToken = (userId) => {
 // @desc    Register user and create company
 // @access  Public
 router.post('/register', [
-  body('firstName').notEmpty().withMessage('First name is required'),
-  body('lastName').notEmpty().withMessage('Last name is required'),
+  body('firstName').notEmpty().withMessage('First name is required')
+    .isLength({ min: 2, max: 30 }).withMessage('First name must be between 2 and 30 characters')
+    .matches(/^[a-zA-Z\s]+$/).withMessage('First name can only contain letters and spaces'),
+  body('lastName').notEmpty().withMessage('Last name is required')
+    .isLength({ min: 2, max: 30 }).withMessage('Last name must be between 2 and 30 characters')
+    .matches(/^[a-zA-Z\s]+$/).withMessage('Last name can only contain letters and spaces'),
   body('email').isEmail().withMessage('Please enter a valid email'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('companyName').notEmpty().withMessage('Company name is required'),
+  body('password')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+  body('companyName').notEmpty().withMessage('Company name is required')
+    .isLength({ min: 2, max: 50 }).withMessage('Company name must be between 2 and 50 characters'),
   body('country').notEmpty().withMessage('Country is required'),
   body('currency').isLength({ min: 3, max: 3 }).withMessage('Currency must be 3 characters')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array().map(err => ({ field: err.path, message: err.msg }))
+      });
     }
 
     const { firstName, lastName, email, password, companyName, country, currency } = req.body;
@@ -37,12 +48,27 @@ router.post('/register', [
     // Check if user already exists
     let user = await User.findOne({ email });
     if (user) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ 
+        message: 'Registration failed',
+        errors: [{ field: 'email', message: 'Email is already registered' }]
+      });
+    }
+
+    // Check if company name already exists (case-insensitive, trim whitespace)
+    const normalizedCompanyName = companyName.trim().toLowerCase();
+    let existingCompany = await Company.findOne({ 
+      name: { $regex: new RegExp(`^${normalizedCompanyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
+    if (existingCompany) {
+      return res.status(400).json({ 
+        message: 'Registration failed',
+        errors: [{ field: 'companyName', message: 'Company name is already taken. Please choose a different name.' }]
+      });
     }
 
     // Create company
     const company = new Company({
-      name: companyName,
+      name: companyName.trim(),
       country,
       currency: currency.toUpperCase(),
       settings: {
@@ -96,7 +122,10 @@ router.post('/login', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array().map(err => ({ field: err.path, message: err.msg }))
+      });
     }
 
     const { email, password } = req.body;
@@ -104,18 +133,27 @@ router.post('/login', [
     // Find user with password
     const user = await User.findOne({ email }).select('+password').populate('company');
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ 
+        message: 'Login failed',
+        errors: [{ field: 'email', message: 'No account found with this email address' }]
+      });
     }
 
     // Check if user is active
     if (!user.isActive) {
-      return res.status(400).json({ message: 'Account is deactivated' });
+      return res.status(400).json({ 
+        message: 'Login failed',
+        errors: [{ field: 'email', message: 'Account is deactivated. Please contact your administrator.' }]
+      });
     }
 
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ 
+        message: 'Login failed',
+        errors: [{ field: 'password', message: 'Incorrect password' }]
+      });
     }
 
     // Update last login
@@ -175,6 +213,30 @@ router.post('/refresh', auth, async (req, res) => {
     res.json({ token });
   } catch (error) {
     console.error('Token refresh error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/auth/check-company/:name
+// @desc    Check if company name exists
+// @access  Public
+router.get('/check-company/:name', async (req, res) => {
+  try {
+    const companyName = req.params.name;
+    const normalizedCompanyName = companyName.trim().toLowerCase();
+    
+    const existingCompany = await Company.findOne({ 
+      name: { $regex: new RegExp(`^${normalizedCompanyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
+    
+    res.json({
+      exists: !!existingCompany,
+      companyName: companyName,
+      normalizedName: normalizedCompanyName,
+      foundCompany: existingCompany ? existingCompany.name : null
+    });
+  } catch (error) {
+    console.error('Check company error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
