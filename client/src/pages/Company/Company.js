@@ -12,6 +12,9 @@ const Company = () => {
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
   const [formData, setFormData] = useState({
     name: '',
     country: '',
@@ -165,6 +168,13 @@ const Company = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Company Settings</h1>
         <p className="text-gray-600">Manage your company information and settings</p>
+        {!isAdmin && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>Read-only view:</strong> You can view company information but only administrators can make changes.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -186,6 +196,7 @@ const Company = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
+                    disabled={!isAdmin}
                   />
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -197,7 +208,7 @@ const Company = () => {
                       onChange={handleCountryChange}
                       required
                       className="input"
-                      disabled
+                      disabled={true}
                     >
                       <option value="">Select country</option>
                       {countries.map(country => (
@@ -216,7 +227,7 @@ const Company = () => {
                     name="currency"
                     value={formData.currency}
                     onChange={handleInputChange}
-                    disabled
+                    disabled={true}
                     helperText="Auto-selected based on country"
                   />
                   <Input
@@ -224,6 +235,7 @@ const Company = () => {
                     name="timezone"
                     value={formData.timezone}
                     onChange={handleInputChange}
+                    disabled={!isAdmin}
                   />
                 </div>
 
@@ -235,24 +247,28 @@ const Company = () => {
                       name="address.street"
                       value={formData.address.street}
                       onChange={handleInputChange}
+                      disabled={!isAdmin}
                     />
                     <Input
                       label="City"
                       name="address.city"
                       value={formData.address.city}
                       onChange={handleInputChange}
+                      disabled={!isAdmin}
                     />
                     <Input
                       label="State/Province"
                       name="address.state"
                       value={formData.address.state}
                       onChange={handleInputChange}
+                      disabled={!isAdmin}
                     />
                     <Input
                       label="ZIP/Postal Code"
                       name="address.zipCode"
                       value={formData.address.zipCode}
                       onChange={handleInputChange}
+                      disabled={!isAdmin}
                     />
                   </div>
                 </div>
@@ -266,28 +282,33 @@ const Company = () => {
                       type="email"
                       value={formData.contact.email}
                       onChange={handleInputChange}
+                      disabled={!isAdmin}
                     />
                     <Input
                       label="Phone"
                       name="contact.phone"
                       value={formData.contact.phone}
                       onChange={handleInputChange}
+                      disabled={!isAdmin}
                     />
                     <Input
                       label="Website"
                       name="contact.website"
                       value={formData.contact.website}
                       onChange={handleInputChange}
+                      disabled={!isAdmin}
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit" loading={saving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </Button>
-                </div>
+                {isAdmin && (
+                  <div className="flex justify-end">
+                    <Button type="submit" loading={saving}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>
@@ -341,6 +362,7 @@ const Company = () => {
                     onChange={handleSettingsChange}
                     placeholder="Travel, Meals, Office Supplies"
                     helperText="Separate categories with commas"
+                    disabled={!isAdmin}
                   />
                 </div>
 
@@ -352,6 +374,7 @@ const Company = () => {
                     value={settingsData.autoApproveLimit}
                     onChange={handleSettingsChange}
                     helperText="Amount below which expenses are auto-approved"
+                    disabled={!isAdmin}
                   />
                 </div>
 
@@ -363,6 +386,7 @@ const Company = () => {
                     value={settingsData.maxExpenseAmount || ''}
                     onChange={handleSettingsChange}
                     helperText="Maximum allowed expense amount (leave empty for no limit)"
+                    disabled={!isAdmin}
                   />
                 </div>
 
@@ -372,17 +396,20 @@ const Company = () => {
                     name="requireReceipts"
                     checked={settingsData.requireReceipts}
                     onChange={handleSettingsChange}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    disabled={!isAdmin}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-50"
                   />
                   <label className="ml-2 block text-sm text-gray-900">
                     Require receipts for expenses
                   </label>
                 </div>
 
-                <Button type="submit" loading={saving} className="w-full">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Save Settings
-                </Button>
+                {isAdmin && (
+                  <Button type="submit" loading={saving} className="w-full">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Save Settings
+                  </Button>
+                )}
               </form>
             </CardContent>
           </Card>

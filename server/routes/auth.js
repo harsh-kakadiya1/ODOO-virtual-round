@@ -243,4 +243,27 @@ router.get('/check-company/:name', async (req, res) => {
   }
 });
 
+// @route   GET /api/auth/check-email/:email
+// @desc    Check if email exists
+// @access  Public
+router.get('/check-email/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    const existingUser = await User.findOne({ 
+      email: normalizedEmail
+    });
+    
+    res.json({
+      exists: !!existingUser,
+      email: email,
+      normalizedEmail: normalizedEmail
+    });
+  } catch (error) {
+    console.error('Check email error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

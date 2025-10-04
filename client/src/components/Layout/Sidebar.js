@@ -44,10 +44,10 @@ const Sidebar = ({ onClose }) => {
       roles: ['admin']
     },
     {
-      name: 'Company',
+      name: 'Company Details',
       href: '/company',
       icon: Building2,
-      roles: ['admin']
+      roles: ['employee', 'manager', 'admin']
     },
     {
       name: 'Profile',

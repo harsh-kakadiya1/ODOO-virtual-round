@@ -9,7 +9,7 @@ const { auth, authorize } = require('../middleware/auth');
 const { uploadReceipt, handleUploadError, deleteFile } = require('../middleware/upload');
 const currencyConverter = require('../utils/currencyConverter');
 const path = require('path');
-const { sendNotification, notificationTypes, createExpenseNotification } = require('../utils/notificationService');
+const NotificationService = require('../utils/notificationService');
 
 const router = express.Router();
 
@@ -194,15 +194,12 @@ router.post('/', [
     // Send notification to managers and admins
     const io = req.app.get('io');
     if (io) {
-      const notification = createExpenseNotification(
-        notificationTypes.EXPENSE_SUBMITTED,
-        createdExpense,
-        createdExpense.employee
-      );
-      sendNotification(io, {
-        ...notification,
-        companyId: req.user.company
-      });
+      try {
+        await NotificationService.createExpenseSubmittedNotification(createdExpense, io);
+      } catch (notificationError) {
+        console.error('Error sending expense submission notification:', notificationError);
+        // Don't fail the expense creation if notification fails
+      }
     }
 
     res.status(201).json(createdExpense);

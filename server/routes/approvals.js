@@ -4,7 +4,7 @@ const Expense = require('../models/Expense');
 const ApprovalFlow = require('../models/ApprovalFlow');
 const ApprovalRule = require('../models/ApprovalRule');
 const { auth, authorize } = require('../middleware/auth');
-const { sendNotification, notificationTypes, createExpenseNotification } = require('../utils/notificationService');
+const NotificationService = require('../utils/notificationService');
 
 const router = express.Router();
 
@@ -251,16 +251,12 @@ router.post('/:expenseId/approve', [
     // Send notification to employee about approval
     const io = req.app.get('io');
     if (io) {
-      const notification = createExpenseNotification(
-        notificationTypes.EXPENSE_APPROVED,
-        updatedExpense,
-        updatedExpense.employee,
-        req.user
-      );
-      sendNotification(io, {
-        ...notification,
-        companyId: expense.company
-      });
+      try {
+        await NotificationService.createExpenseApprovedNotification(updatedExpense, req.user, io);
+      } catch (notificationError) {
+        console.error('Error sending expense approval notification:', notificationError);
+        // Don't fail the approval if notification fails
+      }
     }
 
     res.json(updatedExpense);
@@ -398,16 +394,12 @@ router.post('/:expenseId/reject', [
     // Send notification to employee about rejection
     const io = req.app.get('io');
     if (io) {
-      const notification = createExpenseNotification(
-        notificationTypes.EXPENSE_REJECTED,
-        updatedExpense,
-        updatedExpense.employee,
-        req.user
-      );
-      sendNotification(io, {
-        ...notification,
-        companyId: expense.company
-      });
+      try {
+        await NotificationService.createExpenseRejectedNotification(updatedExpense, req.user, reason, io);
+      } catch (notificationError) {
+        console.error('Error sending expense rejection notification:', notificationError);
+        // Don't fail the rejection if notification fails
+      }
     }
 
     res.json(updatedExpense);

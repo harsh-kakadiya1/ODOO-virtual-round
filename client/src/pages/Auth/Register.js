@@ -30,6 +30,7 @@ const Register = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingCompany, setIsCheckingCompany] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const { register, loading, error } = useAuth();
   const navigate = useNavigate();
 
@@ -61,6 +62,32 @@ const Register = () => {
     }
   }, []);
 
+  // Debounced email check
+  const checkEmail = useCallback(async (email) => {
+    if (!email || !validateEmail(email)) return;
+    
+    try {
+      setIsCheckingEmail(true);
+      const response = await api.get(`/auth/check-email/${encodeURIComponent(email.trim())}`);
+      
+      if (response.data.exists) {
+        setFieldErrors(prev => ({
+          ...prev,
+          email: 'Email is already taken. Please choose a different email.'
+        }));
+      } else {
+        setFieldErrors(prev => ({
+          ...prev,
+          email: ''
+        }));
+      }
+    } catch (error) {
+      console.error('Error checking email:', error);
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  }, []);
+
   // Debounce company name checking
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -71,6 +98,17 @@ const Register = () => {
 
     return () => clearTimeout(timeoutId);
   }, [formData.companyName, checkCompanyName]);
+
+  // Debounce email checking
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (formData.email && validateEmail(formData.email)) {
+        checkEmail(formData.email);
+      }
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.email, checkEmail]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

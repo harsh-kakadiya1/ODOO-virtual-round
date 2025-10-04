@@ -264,11 +264,6 @@ const Expenses = () => {
                         <div className="text-sm font-medium text-gray-900">
                           <Money amount={expense.amount || 0} currency={expense.currency || 'USD'} />
                         </div>
-                        {expense.amountInCompanyCurrency && expense.amountInCompanyCurrency !== expense.amount && (
-                          <div className="text-xs text-gray-500">
-                            Company: <Money amount={expense.amountInCompanyCurrency} currency={expense.currency || 'USD'} />
-                          </div>
-                        )}
                       </td>
                       <td className="py-4 px-4">
                         <Badge className={getStatusBadgeColor(expense.status)}>

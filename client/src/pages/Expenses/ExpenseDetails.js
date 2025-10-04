@@ -138,11 +138,6 @@ const ExpenseDetails = () => {
               <div className="text-2xl font-bold text-gray-900">
                 <Money amount={expense.amount} currency={expense.currency} />
               </div>
-              {expense.amountInCompanyCurrency !== expense.amount && (
-                <div className="text-sm text-gray-500">
-                  (<Money amount={expense.amountInCompanyCurrency} currency={expense.currency} /> in company currency)
-                </div>
-              )}
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-500">Submitted</div>

@@ -167,4 +167,13 @@ export const formatDateTime = (date) => {
   }).format(new Date(date));
 };
 
+export const notificationsAPI = {
+  getNotifications: (page = 1, limit = 20, unreadOnly = false) => 
+    api.get('/notifications', { params: { page, limit, unreadOnly } }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+  deleteNotification: (id) => api.delete(`/notifications/${id}`)
+};
+
 export default api;

@@ -204,11 +204,6 @@ const Approvals = () => {
                           <p className="text-sm font-medium text-gray-900 mt-1">
                             {formatCurrency(expense.amount, expense.currency)}
                           </p>
-                          {expense.currency !== expense.amountInCompanyCurrency && (
-                            <p className="text-xs text-gray-500">
-                              {formatCurrency(expense.amountInCompanyCurrency)}
-                            </p>
-                          )}
                         </div>
                         <div>
                           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">

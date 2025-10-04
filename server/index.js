@@ -40,6 +40,7 @@ app.use('/api/approvals', require('./routes/approvals'));
 app.use('/api/approval-rules', require('./routes/approvalRules'));
 app.use('/api/ocr', require('./routes/ocr'));
 app.use('/api/currency', require('./routes/currency'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -80,8 +81,8 @@ io.on('connection', (socket) => {
 
   // Join user to their company room for notifications
   socket.on('join-company', (companyId) => {
-    socket.join(`company-${companyId}`);
-    console.log(`User ${socket.id} joined company room: company-${companyId}`);
+    socket.join(companyId.toString());
+    console.log(`User ${socket.id} joined company room: ${companyId}`);
   });
 
   // Handle user disconnection

@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { notificationsAPI } from '../utils/api';
 import io from 'socket.io-client';
-import toast from 'react-hot-toast';
 
 const NotificationContext = createContext();
 
@@ -15,33 +15,26 @@ export const useNotifications = () => {
 
 export const NotificationProvider = ({ children }) => {
   const { user } = useAuth();
-  const [socket, setSocket] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [socket, setSocket] = useState(null);
 
+  // Initialize Socket.IO connection
   useEffect(() => {
     if (user && user.company) {
-      // Initialize socket connection
       const newSocket = io('http://localhost:5000');
       
       newSocket.on('connect', () => {
         console.log('Connected to notification server');
-        // Join the company room for notifications
+        // Join company room for notifications
         newSocket.emit('join-company', user.company);
       });
 
-      newSocket.on('notification', (notification) => {
-        // Check if notification is relevant to current user
-        const isRelevant = isNotificationRelevantToUser(notification, user);
-        
-        if (isRelevant) {
-          // Add to notifications list
-          setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Keep last 50
-          setUnreadCount(prev => prev + 1);
-          
-          // Show toast notification
-          showNotificationToast(notification);
-        }
+      newSocket.on('new-notification', (data) => {
+        console.log('New notification received:', data);
+        setNotifications(prev => [data.notification, ...prev]);
+        setUnreadCount(data.unreadCount);
       });
 
       newSocket.on('disconnect', () => {
@@ -56,86 +49,101 @@ export const NotificationProvider = ({ children }) => {
     }
   }, [user]);
 
-  const isNotificationRelevantToUser = (notification, currentUser) => {
-    const { recipient, data } = notification;
+  // Fetch notifications on mount and when user changes
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      fetchUnreadCount();
+    }
+  }, [user]);
 
-    switch (recipient) {
-      case 'managers':
-        // Show to admins and managers
-        return currentUser.role === 'admin' || currentUser.role === 'manager';
-      
-      case 'employee':
-        // Show to the specific employee who submitted the expense
-        return currentUser._id === data.submitterId;
-      
-      case 'approver':
-        // Show to the specific approver
-        return currentUser._id === data.approverId;
-      
-      default:
-        return false;
+  const fetchNotifications = async (page = 1, limit = 20) => {
+    try {
+      setLoading(true);
+      const response = await notificationsAPI.getNotifications(page, limit);
+      setNotifications(response.data.notifications);
+      setUnreadCount(response.data.unreadCount);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const showNotificationToast = (notification) => {
-    const { type, title, message } = notification;
-    
-    switch (type) {
-      case 'expense_submitted':
-      case 'expense_needs_approval':
-        toast.success(message, { duration: 5000 });
-        break;
-      
-      case 'expense_approved':
-      case 'expense_reimbursed':
-        toast.success(message, { duration: 5000 });
-        break;
-      
-      case 'expense_rejected':
-        toast.error(message, { duration: 6000 });
-        break;
-      
-      default:
-        toast(message, { duration: 4000 });
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await notificationsAPI.getUnreadCount();
+      setUnreadCount(response.data.unreadCount);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
     }
   };
 
-  const markAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
-          ? { ...notif, read: true }
-          : notif
-      )
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
-    setUnreadCount(0);
-  };
-
-  const clearNotification = (notificationId) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-    const notification = notifications.find(n => n.id === notificationId);
-    if (notification && !notification.read) {
+  const markAsRead = async (notificationId) => {
+    try {
+      await notificationsAPI.markAsRead(notificationId);
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification._id === notificationId 
+            ? { ...notification, isRead: true, readAt: new Date() }
+            : notification
+        )
+      );
       setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
     }
   };
 
-  const clearAllNotifications = () => {
-    setNotifications([]);
-    setUnreadCount(0);
+  const markAllAsRead = async () => {
+    try {
+      await notificationsAPI.markAllAsRead();
+      setNotifications(prev => 
+        prev.map(notification => ({ 
+          ...notification, 
+          isRead: true, 
+          readAt: new Date() 
+        }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const deleteNotification = async (notificationId) => {
+    try {
+      await notificationsAPI.deleteNotification(notificationId);
+      setNotifications(prev => 
+        prev.filter(notification => notification._id !== notificationId)
+      );
+      // Update unread count if the deleted notification was unread
+      const deletedNotification = notifications.find(n => n._id === notificationId);
+      if (deletedNotification && !deletedNotification.isRead) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const addNotification = (notification) => {
+    setNotifications(prev => [notification, ...prev]);
+    if (!notification.isRead) {
+      setUnreadCount(prev => prev + 1);
+    }
   };
 
   const value = {
     notifications,
     unreadCount,
+    loading,
+    fetchNotifications,
+    fetchUnreadCount,
     markAsRead,
     markAllAsRead,
-    clearNotification,
-    clearAllNotifications,
+    deleteNotification,
+    addNotification,
     socket
   };
 
